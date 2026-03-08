@@ -15,8 +15,8 @@ import {
   deleteAdminProduct,
   getAdminBootstrap,
   loginAdmin,
+  logoutAdmin,
   saveAdminSettings,
-  setAdminAccessToken,
   updateAdminCustomerBlock,
   updateAdminOffer,
   updateAdminOrderStatus,
@@ -190,10 +190,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    setAdminAccessToken(session?.accessToken ?? null);
-  }, [session]);
-
-  useEffect(() => {
     function handleAuthInvalid() {
       handleLogout();
     }
@@ -353,6 +349,7 @@ export default function App() {
   }
 
   function handleLogout() {
+    void logoutAdmin().catch(() => undefined);
     persistSession(null);
     setSession(null);
     setPendingInitialSetup(null);

@@ -200,7 +200,6 @@ export function mapRestaurantSession(restaurant: {
   name: string;
   adminUserName: string | null;
   adminEmail: string | null;
-  accessToken: string;
 }): AdminSessionPayload {
   return {
     restaurantSlug: restaurant.slug,
@@ -208,7 +207,6 @@ export function mapRestaurantSession(restaurant: {
     userName: restaurant.adminUserName ?? "Gerente",
     userEmail: restaurant.adminEmail ?? "",
     platformName: PLATFORM_NAME,
-    accessToken: restaurant.accessToken,
   };
 }
 
@@ -559,7 +557,6 @@ function mapSettings(restaurant: {
 
 export async function getAdminBootstrap(
   slug: string,
-  accessToken: string,
 ): Promise<AdminBootstrapPayload | null> {
   const restaurant = await prisma.restaurant.findUnique({
     where: { slug },
@@ -675,10 +672,7 @@ export async function getAdminBootstrap(
   }
 
   return {
-    session: mapRestaurantSession({
-      ...restaurant,
-      accessToken,
-    }),
+    session: mapRestaurantSession(restaurant),
     metrics: buildMetrics(restaurant.orders),
     categories: restaurant.categories.map(mapCategory),
     orders: restaurant.orders.map(mapOrder),

@@ -137,7 +137,6 @@ export type AdminSession = {
   userName: string;
   userEmail: string;
   platformName: string;
-  accessToken: string;
 };
 
 export type AdminInitialSetup = {

@@ -5,8 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { parseCustomizationConfig } from "@/services/admin/product-customization";
 import { ensureCategoryForRestaurant, parseCurrencyInput } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function POST(
@@ -31,7 +31,7 @@ export async function POST(
     const customizationConfig = parseCustomizationConfig(body.customizationConfig, body.customizationOptions);
 
     if (!name || !description || !price || !category || !imageUrl) {
-      return adminJson({ error: "Preencha os campos obrigatorios do produto." }, { status: 400 });
+      return adminJson(request, { error: "Preencha os campos obrigatorios do produto." }, { status: 400 });
     }
 
     const restaurant = await prisma.restaurant.findUnique({
@@ -40,7 +40,7 @@ export async function POST(
     });
 
     if (!restaurant) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
     const categoryId = await ensureCategoryForRestaurant(restaurant.id, category);
@@ -61,9 +61,9 @@ export async function POST(
       },
     });
 
-    return adminJson({ productId: product.id });
+    return adminJson(request, { productId: product.id });
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel criar o produto." },
       { status: 500 },
     );

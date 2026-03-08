@@ -3,8 +3,8 @@ import { adminJson, adminOptions } from "@/lib/admin-response";
 import { prisma } from "@/lib/prisma";
 import { mapAdminOfferTypeToDb } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function POST(
@@ -39,11 +39,11 @@ export async function POST(
       : [];
 
     if (!name || !type || !discount || !appliesTo || !startDate || !endDate) {
-      return adminJson({ error: "Preencha os campos obrigatorios da oferta." }, { status: 400 });
+      return adminJson(request, { error: "Preencha os campos obrigatorios da oferta." }, { status: 400 });
     }
 
     if (!productIds.length && !categoryIds.length) {
-      return adminJson(
+      return adminJson(request, 
         { error: "Selecione ao menos um prato ou categoria para esta oferta." },
         { status: 400 },
       );
@@ -55,7 +55,7 @@ export async function POST(
     });
 
     if (!restaurant) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
     const offer = await prisma.offer.create({
@@ -76,9 +76,9 @@ export async function POST(
       },
     });
 
-    return adminJson({ offerId: offer.id });
+    return adminJson(request, { offerId: offer.id });
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel criar a oferta." },
       { status: 500 },
     );

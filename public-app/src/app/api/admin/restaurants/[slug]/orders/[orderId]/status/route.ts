@@ -3,8 +3,8 @@ import { adminJson, adminOptions } from "@/lib/admin-response";
 import { prisma } from "@/lib/prisma";
 import { mapAdminOrderStatusToDb, mapDbOrderStatusToAdmin } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function PATCH(
@@ -23,7 +23,7 @@ export async function PATCH(
     const status = body.status ? String(body.status) : null;
 
     if (!status) {
-      return adminJson({ error: "Informe o novo status do pedido." }, { status: 400 });
+      return adminJson(request, { error: "Informe o novo status do pedido." }, { status: 400 });
     }
 
     const order = await prisma.order.findFirst({
@@ -37,7 +37,7 @@ export async function PATCH(
     });
 
     if (!order) {
-      return adminJson({ error: "Pedido nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Pedido nao encontrado." }, { status: 404 });
     }
 
     const updated = await prisma.order.update({
@@ -51,12 +51,12 @@ export async function PATCH(
       },
     });
 
-    return adminJson({
+    return adminJson(request, {
       orderId: updated.id,
       status: mapDbOrderStatusToAdmin(updated.status),
     });
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel atualizar o pedido." },
       { status: 500 },
     );

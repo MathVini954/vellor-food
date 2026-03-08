@@ -5,8 +5,8 @@ import { geocodeAddress } from "@/lib/geocoding";
 import { prisma } from "@/lib/prisma";
 import { parseCurrencyInput } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function PUT(
@@ -25,7 +25,7 @@ export async function PUT(
     const settings = body.settings;
 
     if (!settings) {
-      return adminJson({ error: "Dados de configuracao nao enviados." }, { status: 400 });
+      return adminJson(request, { error: "Dados de configuracao nao enviados." }, { status: 400 });
     }
 
     const restaurant = await prisma.restaurant.findUnique({
@@ -34,7 +34,7 @@ export async function PUT(
     });
 
     if (!restaurant) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
     const restaurantAddress = String(settings.restaurant?.address ?? "").trim() || null;
@@ -82,9 +82,9 @@ export async function PUT(
       });
     });
 
-    return adminJson({ success: true });
+    return adminJson(request, { success: true });
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       {
         error:
           error instanceof Error ? error.message : "Nao foi possivel salvar as configuracoes.",

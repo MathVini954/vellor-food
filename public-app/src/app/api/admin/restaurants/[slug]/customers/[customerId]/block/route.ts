@@ -2,8 +2,8 @@ import { requireAdminAccess } from "@/lib/admin-auth";
 import { adminJson, adminOptions } from "@/lib/admin-response";
 import { prisma } from "@/lib/prisma";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function PATCH(
@@ -27,7 +27,7 @@ export async function PATCH(
     });
 
     if (!restaurant) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
     const customer = await prisma.customer.findFirst({
@@ -39,7 +39,7 @@ export async function PATCH(
     });
 
     if (!customer) {
-      return adminJson({ error: "Cliente nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Cliente nao encontrado." }, { status: 404 });
     }
 
     await prisma.customer.update({
@@ -49,9 +49,9 @@ export async function PATCH(
       },
     });
 
-    return adminJson({ customerId: customer.id, blocked });
+    return adminJson(request, { customerId: customer.id, blocked });
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel atualizar o cliente." },
       { status: 500 },
     );

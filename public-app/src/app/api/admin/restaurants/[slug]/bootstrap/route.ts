@@ -2,8 +2,8 @@ import { requireAdminAccess } from "@/lib/admin-auth";
 import { adminJson, adminOptions } from "@/lib/admin-response";
 import { getAdminBootstrap } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function GET(
@@ -18,15 +18,15 @@ export async function GET(
       return auth.response;
     }
 
-    const payload = await getAdminBootstrap(slug, request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "");
+    const payload = await getAdminBootstrap(slug);
 
     if (!payload) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
-    return adminJson(payload);
+    return adminJson(request, payload);
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel carregar o painel." },
       { status: 500 },
     );

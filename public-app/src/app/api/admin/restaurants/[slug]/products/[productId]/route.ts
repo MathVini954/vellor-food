@@ -5,8 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { parseCustomizationConfig } from "@/services/admin/product-customization";
 import { ensureCategoryForRestaurant, parseCurrencyInput } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function PATCH(
@@ -28,7 +28,7 @@ export async function PATCH(
     });
 
     if (!restaurant) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
     const product = await prisma.product.findFirst({
@@ -42,7 +42,7 @@ export async function PATCH(
     });
 
     if (!product) {
-      return adminJson({ error: "Produto nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Produto nao encontrado." }, { status: 404 });
     }
 
     const data = {};
@@ -77,9 +77,10 @@ export async function PATCH(
       data,
     });
 
-    return adminJson({ productId: product.id });
+    return adminJson(request, { productId: product.id });
   } catch (error) {
     return adminJson(
+      request,
       { error: error instanceof Error ? error.message : "Nao foi possivel atualizar o produto." },
       { status: 500 },
     );
@@ -87,12 +88,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ slug: string; productId: string }> },
 ) {
   try {
     const { slug, productId } = await context.params;
-    const auth = requireAdminAccess(_request, { restaurantSlug: slug });
+    const auth = requireAdminAccess(request, { restaurantSlug: slug });
 
     if (!auth.ok) {
       return auth.response;
@@ -104,7 +105,7 @@ export async function DELETE(
     });
 
     if (!restaurant) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
     const product = await prisma.product.findFirst({
@@ -116,16 +117,17 @@ export async function DELETE(
     });
 
     if (!product) {
-      return adminJson({ error: "Produto nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Produto nao encontrado." }, { status: 404 });
     }
 
     await prisma.product.delete({
       where: { id: product.id },
     });
 
-    return adminJson({ productId: product.id });
+    return adminJson(request, { productId: product.id });
   } catch (error) {
     return adminJson(
+      request,
       { error: error instanceof Error ? error.message : "Nao foi possivel excluir o produto." },
       { status: 500 },
     );

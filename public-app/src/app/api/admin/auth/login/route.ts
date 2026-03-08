@@ -1,4 +1,9 @@
-import { createAdminAccessToken, createAdminSetupToken } from "@/lib/admin-auth";
+import {
+  attachAdminSessionCookie,
+  clearAdminSessionCookie,
+  createAdminAccessToken,
+  createAdminSetupToken,
+} from "@/lib/admin-auth";
 import { adminJson, adminOptions } from "@/lib/admin-response";
 import { consumeRateLimit, getRequestClientKey } from "@/lib/rate-limit";
 import {
@@ -7,8 +12,8 @@ import {
   mapRestaurantSession,
 } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function POST(request: Request) {
@@ -21,7 +26,7 @@ export async function POST(request: Request) {
     });
 
     if (!allowed) {
-      return adminJson({ error: "Muitas tentativas de login. Tente novamente em alguns minutos." }, { status: 429 });
+      return adminJson(request, { error: "Muitas tentativas de login. Tente novamente em alguns minutos." }, { status: 429 });
     }
 
     const body = await request.json();
@@ -29,13 +34,13 @@ export async function POST(request: Request) {
     const password = String(body.password ?? "");
 
     if (!email || !password) {
-      return adminJson({ error: "Informe email e senha." }, { status: 400 });
+      return adminJson(request, { error: "Informe email e senha." }, { status: 400 });
     }
 
     const restaurant = await findRestaurantForAdminLogin(email, password);
 
     if (!restaurant) {
-      return adminJson({ error: "Email ou senha invalidos." }, { status: 401 });
+      return adminJson(request, { error: "Email ou senha invalidos." }, { status: 401 });
     }
 
     if (restaurant.adminPasswordTemporary || !restaurant.onboardingCompleted) {
@@ -44,13 +49,13 @@ export async function POST(request: Request) {
         userEmail: restaurant.adminEmail ?? email,
       });
 
-      return adminJson({
+      return clearAdminSessionCookie(adminJson({
         kind: "initial-setup",
         setup: mapRestaurantInitialSetup({
           ...restaurant,
           setupToken,
         }),
-      });
+      }));
     }
 
     const accessToken = createAdminAccessToken({
@@ -58,22 +63,19 @@ export async function POST(request: Request) {
       userEmail: restaurant.adminEmail ?? email,
     });
 
-    return adminJson({
+    return attachAdminSessionCookie(adminJson({
       kind: "session",
-      session: mapRestaurantSession({
-        ...restaurant,
-        accessToken,
-      }),
-    });
+      session: mapRestaurantSession(restaurant),
+    }), accessToken);
   } catch (error) {
     if (
       error instanceof Error &&
       error.message === "Acesso da empresa indisponivel. Verifique o status do contrato."
     ) {
-      return adminJson({ error: error.message }, { status: 403 });
+      return adminJson(request, { error: error.message }, { status: 403 });
     }
 
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel autenticar." },
       { status: 500 },
     );

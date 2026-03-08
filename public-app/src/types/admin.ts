@@ -125,7 +125,6 @@ export type AdminSessionPayload = {
   userName: string;
   userEmail: string;
   platformName: string;
-  accessToken: string;
 };
 
 export type AdminInitialSetupPayload = {

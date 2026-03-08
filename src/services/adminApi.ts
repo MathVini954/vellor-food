@@ -17,7 +17,6 @@ const ADMIN_API_BASE_URL =
   "http://localhost:3000/api/admin";
 
 const AUTH_INVALID_EVENT = "admin-auth-invalid";
-let currentAdminAccessToken: string | null = null;
 
 export type AdminBootstrap = {
   session: AdminSession;
@@ -54,9 +53,9 @@ export type CompleteInitialSetupPayload = {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${ADMIN_API_BASE_URL}${path}`, {
     ...init,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(currentAdminAccessToken ? { Authorization: `Bearer ${currentAdminAccessToken}` } : {}),
       ...(init?.headers ?? {}),
     },
   });
@@ -65,7 +64,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
-      currentAdminAccessToken = null;
       window.dispatchEvent(new CustomEvent(AUTH_INVALID_EVENT));
     }
 
@@ -73,10 +71,6 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return payload as T;
-}
-
-export function setAdminAccessToken(token: string | null) {
-  currentAdminAccessToken = token;
 }
 
 export function getAdminAuthInvalidEventName() {
@@ -120,6 +114,12 @@ export async function completeAdminInitialSetup(
   }
 
   return response.session;
+}
+
+export async function logoutAdmin() {
+  return request<{ success: boolean }>("/auth/logout", {
+    method: "POST",
+  });
 }
 
 export async function getAdminBootstrap(slug: string) {

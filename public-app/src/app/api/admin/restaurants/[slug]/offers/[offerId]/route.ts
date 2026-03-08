@@ -3,8 +3,8 @@ import { adminJson, adminOptions } from "@/lib/admin-response";
 import { prisma } from "@/lib/prisma";
 import { mapAdminOfferTypeToDb } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function PATCH(
@@ -26,7 +26,7 @@ export async function PATCH(
     });
 
     if (!restaurant) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
     const offer = await prisma.offer.findFirst({
@@ -42,7 +42,7 @@ export async function PATCH(
     });
 
     if (!offer) {
-      return adminJson({ error: "Oferta nao encontrada." }, { status: 404 });
+      return adminJson(request, { error: "Oferta nao encontrada." }, { status: 404 });
     }
 
     const data = {};
@@ -61,7 +61,7 @@ export async function PATCH(
     const nextCategoryIds = categoryIds ?? offer.categoryIds;
 
     if ((productIds !== null || categoryIds !== null) && !nextProductIds.length && !nextCategoryIds.length) {
-      return adminJson(
+      return adminJson(request, 
         { error: "Selecione ao menos um prato ou categoria para esta oferta." },
         { status: 400 },
       );
@@ -102,9 +102,9 @@ export async function PATCH(
       data,
     });
 
-    return adminJson({ offerId: offer.id });
+    return adminJson(request, { offerId: offer.id });
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel atualizar a oferta." },
       { status: 500 },
     );

@@ -1,4 +1,8 @@
-import { createAdminAccessToken, verifyAdminSetupToken } from "@/lib/admin-auth";
+import {
+  attachAdminSessionCookie,
+  createAdminAccessToken,
+  verifyAdminSetupToken,
+} from "@/lib/admin-auth";
 import { adminJson, adminOptions } from "@/lib/admin-response";
 import { consumeRateLimit, getRequestClientKey } from "@/lib/rate-limit";
 import {
@@ -6,8 +10,8 @@ import {
   mapRestaurantSession,
 } from "@/services/admin/restaurant-admin";
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function POST(request: Request) {
@@ -20,7 +24,7 @@ export async function POST(request: Request) {
     });
 
     if (!allowed) {
-      return adminJson(
+      return adminJson(request, 
         { error: "Muitas tentativas de setup inicial. Tente novamente em alguns minutos." },
         { status: 429 },
       );
@@ -37,13 +41,13 @@ export async function POST(request: Request) {
     const password = String(body.password ?? "");
 
     if (!setupToken) {
-      return adminJson({ error: "Token de setup nao informado." }, { status: 401 });
+      return adminJson(request, { error: "Token de setup nao informado." }, { status: 401 });
     }
 
     const tokenPayload = verifyAdminSetupToken(setupToken);
 
     if (!tokenPayload) {
-      return adminJson({ error: "Token de setup invalido ou expirado." }, { status: 401 });
+      return adminJson(request, { error: "Token de setup invalido ou expirado." }, { status: 401 });
     }
 
     const restaurant = await completeRestaurantInitialSetup({
@@ -63,22 +67,19 @@ export async function POST(request: Request) {
       userEmail: restaurant.adminEmail ?? tokenPayload.email,
     });
 
-    return adminJson({
+    return attachAdminSessionCookie(adminJson({
       kind: "session",
-      session: mapRestaurantSession({
-        ...restaurant,
-        accessToken,
-      }),
-    });
+      session: mapRestaurantSession(restaurant),
+    }), accessToken);
   } catch (error) {
     if (
       error instanceof Error &&
       error.message === "Acesso da empresa indisponivel. Verifique o status do contrato."
     ) {
-      return adminJson({ error: error.message }, { status: 403 });
+      return adminJson(request, { error: error.message }, { status: 403 });
     }
 
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel concluir o setup inicial." },
       { status: 500 },
     );

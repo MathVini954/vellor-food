@@ -19,8 +19,8 @@ function normalizeText(value: string) {
     .toLowerCase();
 }
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function GET(
@@ -40,7 +40,7 @@ export async function GET(
     const state = String(searchParams.get("state") ?? "").trim().toUpperCase();
 
     if (!city || !state) {
-      return adminJson({ error: "Informe cidade e UF para importar os bairros." }, { status: 400 });
+      return adminJson(request, { error: "Informe cidade e UF para importar os bairros." }, { status: 400 });
     }
 
     const restaurant = await prisma.restaurant.findUnique({
@@ -49,7 +49,7 @@ export async function GET(
     });
 
     if (!restaurant) {
-      return adminJson({ error: "Restaurante nao encontrado." }, { status: 404 });
+      return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
     }
 
     const citiesResponse = await fetch(
@@ -58,14 +58,14 @@ export async function GET(
     );
 
     if (!citiesResponse.ok) {
-      return adminJson({ error: "Nao foi possivel consultar a cidade informada." }, { status: 502 });
+      return adminJson(request, { error: "Nao foi possivel consultar a cidade informada." }, { status: 502 });
     }
 
     const cities = (await citiesResponse.json()) as IbgeCity[];
     const cityMatch = cities.find((item) => normalizeText(item.nome) === normalizeText(city));
 
     if (!cityMatch) {
-      return adminJson({ error: "Cidade nao encontrada para a UF informada." }, { status: 404 });
+      return adminJson(request, { error: "Cidade nao encontrada para a UF informada." }, { status: 404 });
     }
 
     const subdistrictsResponse = await fetch(
@@ -97,11 +97,11 @@ export async function GET(
       });
     }
 
-    return adminJson({
+    return adminJson(request, {
       neighborhoods: [...neighborhoods].sort((left, right) => left.localeCompare(right, "pt-BR")),
     });
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       {
         error:
           error instanceof Error ? error.message : "Nao foi possivel importar os bairros da cidade.",

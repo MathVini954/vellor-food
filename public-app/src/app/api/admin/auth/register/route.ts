@@ -1,4 +1,4 @@
-import { createAdminAccessToken } from "@/lib/admin-auth";
+import { attachAdminSessionCookie, createAdminAccessToken } from "@/lib/admin-auth";
 import { Prisma } from "@prisma/client";
 import { adminJson, adminOptions } from "@/lib/admin-response";
 import { geocodeAddress } from "@/lib/geocoding";
@@ -30,14 +30,14 @@ async function generateUniqueRestaurantSlug(name: string) {
   return candidate;
 }
 
-export function OPTIONS() {
-  return adminOptions();
+export function OPTIONS(request: Request) {
+  return adminOptions(request);
 }
 
 export async function POST(request: Request) {
   try {
     if (process.env.ALLOW_PUBLIC_RESTAURANT_SIGNUP !== "true") {
-      return adminJson(
+      return adminJson(request, 
         { error: "Cadastro publico de restaurante desabilitado. Use o painel do dono da plataforma." },
         { status: 403 },
       );
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     });
 
     if (!allowed) {
-      return adminJson({ error: "Muitas tentativas de cadastro. Tente novamente em alguns minutos." }, { status: 429 });
+      return adminJson(request, { error: "Muitas tentativas de cadastro. Tente novamente em alguns minutos." }, { status: 429 });
     }
 
     const body = await request.json();
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     const state = String(body.state ?? "").trim().toUpperCase();
 
     if (!restaurantName || !whatsapp || !adminName || !email || !password || !address || !city || !state) {
-      return adminJson({ error: "Preencha todos os campos obrigatorios." }, { status: 400 });
+      return adminJson(request, { error: "Preencha todos os campos obrigatorios." }, { status: 400 });
     }
 
     const existingEmail = await prisma.restaurant.findFirst({
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     });
 
     if (existingEmail) {
-      return adminJson({ error: "Ja existe um restaurante com esse e-mail." }, { status: 409 });
+      return adminJson(request, { error: "Ja existe um restaurante com esse e-mail." }, { status: 409 });
     }
 
     const slug = await generateUniqueRestaurantSlug(restaurantName);
@@ -122,15 +122,12 @@ export async function POST(request: Request) {
       userEmail: restaurant.adminEmail ?? email,
     });
 
-    return adminJson({
+    return attachAdminSessionCookie(adminJson({
       kind: "session",
-      session: mapRestaurantSession({
-        ...restaurant,
-        accessToken,
-      }),
-    });
+      session: mapRestaurantSession(restaurant),
+    }), accessToken);
   } catch (error) {
-    return adminJson(
+    return adminJson(request, 
       { error: error instanceof Error ? error.message : "Nao foi possivel criar o restaurante." },
       { status: 500 },
     );
