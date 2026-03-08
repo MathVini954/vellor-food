@@ -174,6 +174,7 @@ export default async function OwnerConsolePage() {
                 provision.company()
               </p>
               <form action={createCompanyAction} className="mt-5 space-y-4">
+                <input name="productCode" type="hidden" value="FOOD" />
                 <input
                   className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
                   name="companyName"
@@ -290,7 +291,7 @@ export default async function OwnerConsolePage() {
                             </div>
 
                             <form action={deleteCompanyAction}>
-                              <input name="restaurantId" type="hidden" value={company.id} />
+                              <input name="companyId" type="hidden" value={company.companyId} />
                               <button
                                 className="inline-flex items-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 transition hover:bg-rose-500/20"
                                 type="submit"
@@ -302,7 +303,8 @@ export default async function OwnerConsolePage() {
                           </div>
 
                           <form action={updateCompanyStatusAction} className="mt-4 space-y-3">
-                            <input name="restaurantId" type="hidden" value={company.id} />
+                            <input name="companyId" type="hidden" value={company.companyId} />
+                            <input name="productCode" type="hidden" value={company.productCode} />
                             <div className="grid gap-3 md:grid-cols-2">
                               <select
                                 className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none"

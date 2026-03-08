@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { RestaurantContractStatus } from "@prisma/client";
+import { RestaurantContractStatus, SaaSProductCode } from "@prisma/client";
 import {
   authenticateOwnerConsole,
   clearOwnerConsoleSession,
@@ -58,6 +58,7 @@ export async function createCompanyAction(formData: FormData) {
     monthlyPrice: String(formData.get("monthlyPrice") ?? ""),
     notes: String(formData.get("notes") ?? ""),
     status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
+    productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
   });
 
   refreshDashboard();
@@ -67,10 +68,11 @@ export async function updateCompanyStatusAction(formData: FormData) {
   await requireOwnerConsoleSession();
 
   await updateManagedCompanyContract({
-    restaurantId: String(formData.get("restaurantId") ?? ""),
+    companyId: String(formData.get("companyId") ?? ""),
     status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
     endsAt: String(formData.get("endsAt") ?? ""),
     notes: String(formData.get("notes") ?? ""),
+    productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
   });
 
   refreshDashboard();
@@ -78,6 +80,6 @@ export async function updateCompanyStatusAction(formData: FormData) {
 
 export async function deleteCompanyAction(formData: FormData) {
   await requireOwnerConsoleSession();
-  await deleteManagedCompany(String(formData.get("restaurantId") ?? ""));
+  await deleteManagedCompany(String(formData.get("companyId") ?? ""));
   refreshDashboard();
 }

@@ -78,6 +78,15 @@ enum PlatformUserRole {
 
 enum SaaSProductCode {
   FOOD
+  BARBER
+}
+
+enum ProvisioningJobStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELED
 }
 
 model Company {
@@ -94,6 +103,7 @@ model Company {
   restaurants         Restaurant[]
   platformUsers       PlatformUser[]
   productAccesses     CompanyProductAccess[]
+  provisioningJobs    ProvisioningJob[]
 
   @@index([status])
 }
@@ -106,6 +116,7 @@ model SaaSProduct {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   companyAccesses CompanyProductAccess[]
+  provisioningJobs ProvisioningJob[]
 }
 
 model CompanyProductAccess {
@@ -124,6 +135,26 @@ model CompanyProductAccess {
 
   @@unique([companyId, productId])
   @@index([status, contractEndsAt])
+}
+
+model ProvisioningJob {
+  id               String                @id @default(cuid())
+  companyId        String
+  productId        String
+  requestedByEmail String?
+  status           ProvisioningJobStatus @default(PENDING)
+  requestPayload   Json?
+  responsePayload  Json?
+  errorMessage     String?
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  company          Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product          SaaSProduct           @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, status])
+  @@index([productId, status])
 }
 
 model PlatformUser {

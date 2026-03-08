@@ -1,5 +1,6 @@
 import {
   CompanyStatus,
+  PlatformUserRole,
   Prisma,
   ProductAccessStatus,
   RestaurantContractStatus,
@@ -7,6 +8,7 @@ import {
 } from "@prisma/client";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { runProvisioningJob } from "@/services/platform/provisioning";
 
 function slugifyCompanyName(value: string) {
   return value
@@ -23,7 +25,7 @@ async function generateUniqueCompanySlug(name: string) {
   let candidate = baseSlug;
   let suffix = 2;
 
-  while (await prisma.restaurant.findUnique({ where: { slug: candidate }, select: { id: true } })) {
+  while (await prisma.company.findUnique({ where: { slug: candidate }, select: { id: true } })) {
     candidate = `${baseSlug}-${suffix}`;
     suffix += 1;
   }
@@ -40,9 +42,54 @@ function parseDecimalInput(value: string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function toCompanyStatus(status: RestaurantContractStatus): CompanyStatus {
+  return status as unknown as CompanyStatus;
+}
+
+function toProductAccessStatus(status: RestaurantContractStatus): ProductAccessStatus {
+  return status as unknown as ProductAccessStatus;
+}
+
+function toRestaurantContractStatus(status: ProductAccessStatus): RestaurantContractStatus {
+  return status as unknown as RestaurantContractStatus;
+}
+
+function getProductMetadata(productCode: SaaSProductCode) {
+  if (productCode === "BARBER") {
+    return {
+      name: "Barber",
+      description: "Gestao de barbearia, agenda e servicos.",
+    };
+  }
+
+  return {
+    name: "Food",
+    description: "Operacao completa para cardapio, pedidos e delivery.",
+  };
+}
+
+async function ensureProduct(tx: Prisma.TransactionClient, productCode: SaaSProductCode) {
+  const metadata = getProductMetadata(productCode);
+
+  return tx.saaSProduct.upsert({
+    where: { code: productCode },
+    update: {
+      name: metadata.name,
+      description: metadata.description,
+    },
+    create: {
+      code: productCode,
+      name: metadata.name,
+      description: metadata.description,
+    },
+  });
+}
+
 export type ManagedCompanyRecord = {
   id: string;
-  companyId: string | null;
+  companyId: string;
+  foodTenantId: string | null;
+  productCode: SaaSProductCode;
   name: string;
   slug: string;
   whatsapp: string;
@@ -68,60 +115,100 @@ export type ManagedCompanyRecord = {
   };
 };
 
-function toCompanyStatus(status: RestaurantContractStatus): CompanyStatus {
-  return status as unknown as CompanyStatus;
-}
-
-function toProductAccessStatus(status: RestaurantContractStatus): ProductAccessStatus {
-  return status as unknown as ProductAccessStatus;
-}
-
-async function ensureFoodProduct(tx: Prisma.TransactionClient) {
-  return tx.saaSProduct.upsert({
-    where: { code: SaaSProductCode.FOOD },
-    update: {},
-    create: {
-      code: SaaSProductCode.FOOD,
-      name: "Food",
-      description: "Operacao completa para cardapio, pedidos e delivery.",
-    },
-  });
-}
-
 export async function listManagedCompanies() {
-  return prisma.restaurant.findMany({
+  const companies = await prisma.company.findMany({
     orderBy: [{ createdAt: "desc" }],
     select: {
       id: true,
-      companyId: true,
       name: true,
       slug: true,
-      whatsapp: true,
-      adminEmail: true,
-      adminUserName: true,
-      adminPasswordTemporary: true,
-      onboardingCompleted: true,
-      city: true,
-      state: true,
+      primaryContactPhone: true,
       createdAt: true,
-      contract: {
+      productAccesses: {
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
         select: {
           status: true,
-          startsAt: true,
-          endsAt: true,
-          canceledAt: true,
+          contractStartsAt: true,
+          contractEndsAt: true,
           monthlyPrice: true,
           notes: true,
+          product: {
+            select: {
+              code: true,
+            },
+          },
         },
       },
-      _count: {
+      platformUsers: {
+        where: {
+          role: PlatformUserRole.COMPANY_ADMIN,
+        },
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
         select: {
-          products: true,
-          orders: true,
-          customers: true,
+          email: true,
+          name: true,
+          mustChangePassword: true,
+        },
+      },
+      restaurants: {
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
+        select: {
+          id: true,
+          adminPasswordTemporary: true,
+          onboardingCompleted: true,
+          city: true,
+          state: true,
+          _count: {
+            select: {
+              products: true,
+              orders: true,
+              customers: true,
+            },
+          },
         },
       },
     },
+  });
+
+  return companies.map((company) => {
+    const productAccess = company.productAccesses[0] ?? null;
+    const companyAdmin = company.platformUsers[0] ?? null;
+    const foodTenant = company.restaurants[0] ?? null;
+
+    return {
+      id: company.id,
+      companyId: company.id,
+      foodTenantId: foodTenant?.id ?? null,
+      productCode: productAccess?.product.code ?? "FOOD",
+      name: company.name,
+      slug: company.slug,
+      whatsapp: company.primaryContactPhone ?? "",
+      adminEmail: companyAdmin?.email ?? null,
+      adminUserName: companyAdmin?.name ?? null,
+      adminPasswordTemporary: foodTenant?.adminPasswordTemporary ?? companyAdmin?.mustChangePassword ?? true,
+      onboardingCompleted: foodTenant?.onboardingCompleted ?? false,
+      city: foodTenant?.city ?? null,
+      state: foodTenant?.state ?? null,
+      createdAt: company.createdAt,
+      contract: productAccess
+        ? {
+            status: toRestaurantContractStatus(productAccess.status),
+            startsAt: productAccess.contractStartsAt,
+            endsAt: productAccess.contractEndsAt,
+            canceledAt: productAccess.status === "CANCELED" ? productAccess.contractEndsAt : null,
+            monthlyPrice: productAccess.monthlyPrice,
+            notes: productAccess.notes,
+          }
+        : null,
+      _count: {
+        products: foodTenant?._count.products ?? 0,
+        orders: foodTenant?._count.orders ?? 0,
+        customers: foodTenant?._count.customers ?? 0,
+      },
+    } satisfies ManagedCompanyRecord;
   });
 }
 
@@ -136,6 +223,7 @@ export async function createManagedCompany(input: {
   monthlyPrice?: string;
   notes?: string;
   status?: RestaurantContractStatus;
+  productCode?: SaaSProductCode;
 }) {
   const companyName = input.companyName.trim();
   const primaryContactPhone = input.primaryContactPhone.replace(/\D/g, "");
@@ -146,30 +234,26 @@ export async function createManagedCompany(input: {
   const contractEndsAt = input.contractEndsAt?.trim() ?? "";
   const notes = input.notes?.trim() ?? "";
   const status = input.status ?? "ACTIVE";
+  const productCode = input.productCode ?? "FOOD";
 
   if (!companyName || !primaryContactPhone || !adminName || !email || !temporaryPassword) {
     throw new Error("Preencha os campos obrigatorios da empresa.");
   }
-
-  const existingEmail = await prisma.restaurant.findFirst({
-    where: { adminEmail: email },
-    select: { id: true },
-  });
 
   const existingPlatformUser = await prisma.platformUser.findUnique({
     where: { email },
     select: { id: true },
   });
 
-  if (existingEmail || existingPlatformUser) {
+  if (existingPlatformUser) {
     throw new Error("Ja existe uma empresa provisionada com este email administrativo.");
   }
 
   const slug = await generateUniqueCompanySlug(companyName);
   const passwordHash = await hashPassword(temporaryPassword);
 
-  return prisma.$transaction(async (tx) => {
-    const foodProduct = await ensureFoodProduct(tx);
+  const result = await prisma.$transaction(async (tx) => {
+    const product = await ensureProduct(tx, productCode);
     const platformCompany = await tx.company.create({
       data: {
         name: companyName,
@@ -184,10 +268,10 @@ export async function createManagedCompany(input: {
       },
     });
 
-    await tx.companyProductAccess.create({
+    const productAccess = await tx.companyProductAccess.create({
       data: {
         companyId: platformCompany.id,
-        productId: foodProduct.id,
+        productId: product.id,
         status: toProductAccessStatus(status),
         contractStartsAt: contractStartsAt ? new Date(`${contractStartsAt}T12:00:00.000Z`) : new Date(),
         contractEndsAt: contractEndsAt ? new Date(`${contractEndsAt}T23:59:59.999Z`) : null,
@@ -197,6 +281,9 @@ export async function createManagedCompany(input: {
             : null,
         notes: notes || null,
       },
+      select: {
+        id: true,
+      },
     });
 
     await tx.platformUser.create({
@@ -205,161 +292,172 @@ export async function createManagedCompany(input: {
         email,
         passwordHash,
         name: adminName,
-        role: "COMPANY_ADMIN",
+        role: PlatformUserRole.COMPANY_ADMIN,
         mustChangePassword: true,
       },
     });
 
-    const restaurant = await tx.restaurant.create({
-      data: {
-        companyId: platformCompany.id,
-        name: companyName,
-        slug,
-        whatsapp: primaryContactPhone,
-        adminEmail: email,
-        adminPassword: passwordHash,
-        adminPasswordTemporary: true,
-        adminUserName: adminName,
-        onboardingCompleted: false,
-        primaryColor: "#050505",
-        secondaryColor: "#8b8b8b",
-        welcomeMessage: "Setup inicial pendente. Aguardando onboarding da operacao.",
-        deliveryFee: new Prisma.Decimal(0),
-        freeDeliveryRadiusKm: new Prisma.Decimal(0),
-        minimumOrderValue: new Prisma.Decimal(0),
-        isOpen: false,
-        deliveryActive: false,
-        pickupActive: false,
-        acceptCash: true,
-        acceptPix: true,
-        acceptCardOnDelivery: true,
-      },
-      select: {
-        id: true,
-        slug: true,
-      },
-    });
-
-    await tx.restaurantContract.create({
-      data: {
-        restaurantId: restaurant.id,
-        status,
-        startsAt: contractStartsAt ? new Date(`${contractStartsAt}T12:00:00.000Z`) : new Date(),
-        endsAt: contractEndsAt ? new Date(`${contractEndsAt}T23:59:59.999Z`) : null,
-        monthlyPrice:
-          input.monthlyPrice && input.monthlyPrice.trim()
-            ? new Prisma.Decimal(parseDecimalInput(input.monthlyPrice))
-            : null,
-        notes: notes || null,
-      },
-    });
-
-    return restaurant;
+    return {
+      companyId: platformCompany.id,
+      productAccessId: productAccess.id,
+      productCode,
+      requestedByEmail: email,
+    };
   });
+
+  await runProvisioningJob({
+    companyId: result.companyId,
+    productCode: result.productCode,
+    requestedByEmail: result.requestedByEmail,
+  });
+
+  return result;
 }
 
 export async function updateManagedCompanyContract(input: {
-  restaurantId: string;
+  companyId: string;
   status: RestaurantContractStatus;
   endsAt?: string;
   notes?: string;
+  productCode?: SaaSProductCode;
 }) {
   const endsAt = input.endsAt?.trim() ?? "";
   const notes = input.notes?.trim() ?? "";
+  const productCode = input.productCode ?? "FOOD";
 
-  const company = await prisma.restaurant.findUnique({
-    where: { id: input.restaurantId },
-    select: { id: true, companyId: true },
+  const company = await prisma.company.findUnique({
+    where: { id: input.companyId },
+    select: {
+      id: true,
+      productAccesses: {
+        where: {
+          product: {
+            code: productCode,
+          },
+        },
+        select: {
+          id: true,
+          productId: true,
+        },
+        take: 1,
+      },
+      restaurants: {
+        select: {
+          id: true,
+        },
+      },
+    },
   });
 
   if (!company) {
     throw new Error("Empresa nao encontrada.");
   }
 
-  const data: Prisma.RestaurantContractUpdateInput = {
-    status: input.status,
-    notes: notes || null,
-    canceledAt: input.status === "CANCELED" ? new Date() : null,
-    endsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
-  };
+  const product = company.productAccesses[0];
 
-  return prisma.$transaction(async (tx) => {
-    const contract = await tx.restaurantContract.upsert({
-      where: { restaurantId: company.id },
-      update: data,
-      create: {
-        restaurantId: company.id,
-        status: input.status,
-        startsAt: new Date(),
-        endsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
-        canceledAt: input.status === "CANCELED" ? new Date() : null,
+  if (!product) {
+    throw new Error(`Produto ${productCode} nao ativado para esta empresa.`);
+  }
+
+  const contractEndsAt = endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.company.update({
+      where: { id: company.id },
+      data: {
+        status: toCompanyStatus(input.status),
+      },
+    });
+
+    await tx.companyProductAccess.update({
+      where: { id: product.id },
+      data: {
+        status: toProductAccessStatus(input.status),
+        contractEndsAt,
         notes: notes || null,
       },
     });
 
-    if (company.companyId) {
-      await tx.company.update({
-        where: { id: company.companyId },
-        data: {
-          status: toCompanyStatus(input.status),
-        },
-      });
+    const foodTenant = company.restaurants[0];
 
-      const foodProduct = await ensureFoodProduct(tx);
-      await tx.companyProductAccess.upsert({
-        where: {
-          companyId_productId: {
-            companyId: company.companyId,
-            productId: foodProduct.id,
-          },
-        },
+    if (productCode === "FOOD" && foodTenant) {
+      await tx.restaurantContract.upsert({
+        where: { restaurantId: foodTenant.id },
         update: {
-          status: toProductAccessStatus(input.status),
-          contractEndsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
+          status: input.status,
+          endsAt: contractEndsAt,
+          canceledAt: input.status === "CANCELED" ? new Date() : null,
           notes: notes || null,
         },
         create: {
-          companyId: company.companyId,
-          productId: foodProduct.id,
-          status: toProductAccessStatus(input.status),
-          contractStartsAt: new Date(),
-          contractEndsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
+          restaurantId: foodTenant.id,
+          status: input.status,
+          startsAt: new Date(),
+          endsAt: contractEndsAt,
+          canceledAt: input.status === "CANCELED" ? new Date() : null,
           notes: notes || null,
         },
       });
     }
-
-    return contract;
   });
+
+  if (productCode === "FOOD" && input.status === "ACTIVE" && company.restaurants.length === 0) {
+    const companyAdmin = await prisma.platformUser.findFirst({
+      where: {
+        companyId: company.id,
+        role: PlatformUserRole.COMPANY_ADMIN,
+      },
+      select: {
+        email: true,
+      },
+    });
+
+    await runProvisioningJob({
+      companyId: company.id,
+      productCode,
+      requestedByEmail: companyAdmin?.email ?? null,
+    });
+  }
 }
 
-export async function deleteManagedCompany(restaurantId: string) {
-  const company = await prisma.restaurant.findUnique({
-    where: { id: restaurantId },
-    select: { id: true, companyId: true },
+export async function deleteManagedCompany(companyId: string) {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: {
+      id: true,
+      restaurants: {
+        select: {
+          id: true,
+        },
+      },
+    },
   });
 
   if (!company) {
     throw new Error("Empresa nao encontrada.");
   }
 
-  await prisma.orderItem.deleteMany({
-    where: {
-      order: {
-        restaurantId,
+  for (const restaurant of company.restaurants) {
+    await prisma.orderItem.deleteMany({
+      where: {
+        order: {
+          restaurantId: restaurant.id,
+        },
       },
+    });
+    await prisma.order.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.offer.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.product.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.category.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.deliveryArea.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.customer.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.restaurantContract.deleteMany({ where: { restaurantId: restaurant.id } });
+    await prisma.restaurant.delete({ where: { id: restaurant.id } });
+  }
+
+  await prisma.company.delete({
+    where: {
+      id: company.id,
     },
   });
-  await prisma.order.deleteMany({ where: { restaurantId } });
-  await prisma.offer.deleteMany({ where: { restaurantId } });
-  await prisma.product.deleteMany({ where: { restaurantId } });
-  await prisma.category.deleteMany({ where: { restaurantId } });
-  await prisma.deliveryArea.deleteMany({ where: { restaurantId } });
-  await prisma.customer.deleteMany({ where: { restaurantId } });
-  await prisma.restaurantContract.deleteMany({ where: { restaurantId } });
-  await prisma.restaurant.delete({ where: { id: restaurantId } });
-
-  if (company.companyId) {
-    await prisma.company.delete({ where: { id: company.companyId } });
-  }
 }
