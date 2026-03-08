@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { Search, Store } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
-import { CartFab } from "./cart-fab";
 import { ProductCard } from "./product-card";
 import { useRestaurantStore } from "./restaurant-store-provider";
 import type { MenuCategorySection, PublicRestaurant } from "@/types/public";
@@ -152,8 +151,6 @@ export function MenuPageClient({ restaurant, categories }: MenuPageClientProps) 
           </div>
         )}
       </div>
-
-      <CartFab />
     </div>
   );
 }

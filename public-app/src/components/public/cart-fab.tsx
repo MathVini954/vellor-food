@@ -12,23 +12,34 @@ export function CartFab() {
     return null;
   }
 
+  const itemLabel = itemCount === 1 ? "1 item" : `${itemCount} itens`;
+
   return (
     <Link
       href={`/r/${slug}/checkout`}
-      className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-between rounded-[26px] bg-slate-950 px-5 py-4 text-white shadow-[0_20px_40px_rgba(15,23,42,0.28)] transition hover:bg-slate-800 sm:left-auto sm:right-6 sm:w-[360px]"
+      className="fixed inset-x-3 bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-auto max-w-[430px] items-center justify-between gap-3 rounded-[26px] bg-[linear-gradient(135deg,#ef4444,#dc2626)] px-4 py-3 text-white shadow-[0_22px_40px_rgba(220,38,38,0.32)] transition hover:brightness-105"
     >
-      <div className="flex items-center gap-3">
-        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
-          <ShoppingCart size={20} />
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/15">
+          {restaurant.logoUrl ? (
+            <img className="h-full w-full object-cover" src={restaurant.logoUrl} alt={restaurant.name} />
+          ) : (
+            <ShoppingCart size={20} />
+          )}
         </span>
-        <div>
-          <p className="text-sm font-semibold">{itemCount} itens no carrinho</p>
-          <p className="text-xs text-slate-300">
-            {restaurant.isOpen ? "Pronto para finalizar" : "Loja fechada no momento"}
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold uppercase tracking-[0.18em] text-white/72">
+            {restaurant.isOpen ? "Resumo da sacola" : "Loja fechada no momento"}
+          </p>
+          <p className="mt-1 truncate text-[24px] font-black leading-none text-white">
+            {formatCurrency(subtotal)}
+            <span className="ml-2 text-base font-medium text-white/80">/ {itemLabel}</span>
           </p>
         </div>
       </div>
-      <strong className="text-base font-semibold">{formatCurrency(subtotal)}</strong>
+      <span className="shrink-0 rounded-[20px] bg-white px-4 py-3 text-sm font-bold text-[#dc2626] shadow-[0_10px_20px_rgba(255,255,255,0.2)]">
+        Ver sacola
+      </span>
     </Link>
   );
 }
