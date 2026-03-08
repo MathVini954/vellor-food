@@ -93,7 +93,13 @@ function getSectionFromPath(pathname: string): { section: AdminSection; restaura
 }
 
 function readStoredSession(): AdminSession | null {
-  const raw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+  const legacyRaw = window.localStorage.getItem(AUTH_STORAGE_KEY);
+
+  if (legacyRaw) {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  }
+
+  const raw = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
 
   if (!raw) {
     return null;
@@ -109,10 +115,12 @@ function readStoredSession(): AdminSession | null {
 function persistSession(session: AdminSession | null) {
   if (!session) {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
     return;
   }
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  window.sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
 }
 
 function LoadingState({ title, description }: { title: string; description: string }) {
