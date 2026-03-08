@@ -40,21 +40,56 @@ const FALLBACK_PLATFORM_NAME = "MesaPilot Gestao";
 const PUBLIC_SIGNUP_ENABLED = import.meta.env.VITE_ALLOW_PUBLIC_RESTAURANT_SIGNUP === "true";
 const INITIAL_SETUP_PATH = "/primeiro-acesso";
 
-const adminRoutes = {
-  Dashboard: "/admin/dashboard",
-  Pedidos: "/admin/pedidos",
-  Cardapio: "/admin/cardapio",
-  Ofertas: "/admin/ofertas",
-  Clientes: "/admin/clientes",
-  Configuracoes: "/admin/configuracoes",
+const adminRouteSegments = {
+  Dashboard: "dashboard",
+  Pedidos: "pedidos",
+  Cardapio: "cardapio",
+  Ofertas: "ofertas",
+  Clientes: "clientes",
+  Configuracoes: "configuracoes",
 } as const satisfies Record<AdminSection, string>;
 
-function getSectionFromPath(pathname: string): AdminSection | null {
-  const matchedRoute = (Object.entries(adminRoutes) as [AdminSection, string][]).find(
-    ([, route]) => route === pathname,
+const legacyAdminRoutes = Object.fromEntries(
+  (Object.entries(adminRouteSegments) as [AdminSection, string][]).map(([section, segment]) => [
+    section,
+    `/admin/${segment}`,
+  ]),
+) as Record<AdminSection, string>;
+
+function buildAdminRoute(section: AdminSection, restaurantSlug: string) {
+  return `/admin/${encodeURIComponent(restaurantSlug)}/${adminRouteSegments[section]}`;
+}
+
+function getSectionFromPath(pathname: string): { section: AdminSection; restaurantSlug: string | null } | null {
+  const currentPath = pathname.replace(/\/+$/, "") || "/";
+  const adminMatch = currentPath.match(/^\/admin\/([^/]+)\/([^/]+)$/);
+
+  if (adminMatch) {
+    const [, restaurantSlug, sectionSegment] = adminMatch;
+    const matchedRoute = (Object.entries(adminRouteSegments) as [AdminSection, string][]).find(
+      ([, segment]) => segment === sectionSegment,
+    );
+
+    if (matchedRoute) {
+      return {
+        section: matchedRoute[0],
+        restaurantSlug: decodeURIComponent(restaurantSlug),
+      };
+    }
+  }
+
+  const matchedLegacyRoute = (Object.entries(legacyAdminRoutes) as [AdminSection, string][]).find(
+    ([, route]) => route === currentPath,
   );
 
-  return matchedRoute?.[0] ?? null;
+  if (!matchedLegacyRoute) {
+    return null;
+  }
+
+  return {
+    section: matchedLegacyRoute[0],
+    restaurantSlug: null,
+  };
 }
 
 function readStoredSession(): AdminSession | null {
@@ -173,14 +208,34 @@ export default function App() {
       return;
     }
 
-    if (session && !getSectionFromPath(pathname)) {
-      window.history.replaceState({}, "", adminRoutes.Dashboard);
-      setPathname(adminRoutes.Dashboard);
+    if (session) {
+      const currentRoute = getSectionFromPath(pathname);
+
+      if (!currentRoute) {
+        const dashboardPath = buildAdminRoute("Dashboard", session.restaurantSlug);
+        window.history.replaceState({}, "", dashboardPath);
+        setPathname(dashboardPath);
+        return;
+      }
+
+      const nextPath =
+        currentRoute.restaurantSlug === session.restaurantSlug
+          ? null
+          : buildAdminRoute(currentRoute.section, session.restaurantSlug);
+
+      if (nextPath && nextPath !== pathname) {
+        window.history.replaceState({}, "", nextPath);
+        setPathname(nextPath);
+      }
     }
   }, [session, pendingInitialSetup, pathname]);
 
   function navigateToSection(section: AdminSection) {
-    const targetPath = adminRoutes[section];
+    if (!session) {
+      return;
+    }
+
+    const targetPath = buildAdminRoute(section, session.restaurantSlug);
 
     if (pathname === targetPath) {
       return;
@@ -263,8 +318,9 @@ export default function App() {
       persistSession(result.session);
       setBootstrap(null);
       setLoadError("");
-      window.history.pushState({}, "", adminRoutes.Dashboard);
-      setPathname(adminRoutes.Dashboard);
+      const dashboardPath = buildAdminRoute("Dashboard", result.session.restaurantSlug);
+      window.history.pushState({}, "", dashboardPath);
+      setPathname(dashboardPath);
       return true;
     } catch {
       return false;
@@ -279,8 +335,9 @@ export default function App() {
       persistSession(nextSession);
       setBootstrap(null);
       setLoadError("");
-      window.history.pushState({}, "", adminRoutes.Dashboard);
-      setPathname(adminRoutes.Dashboard);
+      const dashboardPath = buildAdminRoute("Dashboard", nextSession.restaurantSlug);
+      window.history.pushState({}, "", dashboardPath);
+      setPathname(dashboardPath);
       return true;
     } catch {
       return false;
@@ -311,8 +368,9 @@ export default function App() {
       persistSession(nextSession);
       setBootstrap(null);
       setLoadError("");
-      window.history.pushState({}, "", adminRoutes.Dashboard);
-      setPathname(adminRoutes.Dashboard);
+      const dashboardPath = buildAdminRoute("Dashboard", nextSession.restaurantSlug);
+      window.history.pushState({}, "", dashboardPath);
+      setPathname(dashboardPath);
       return null;
     } catch (error) {
       return error instanceof Error ? error.message : "Nao foi possivel concluir o cadastro inicial.";
@@ -503,7 +561,7 @@ export default function App() {
     return null;
   }
 
-  const currentSection = getSectionFromPath(pathname) ?? "Dashboard";
+  const currentSection = getSectionFromPath(pathname)?.section ?? "Dashboard";
   const { restaurantName, userName, platformName } = bootstrap.session;
   void platformName;
 
