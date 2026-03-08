@@ -1,4 +1,10 @@
-import { Prisma, RestaurantContractStatus } from "@prisma/client";
+import {
+  CompanyStatus,
+  Prisma,
+  ProductAccessStatus,
+  RestaurantContractStatus,
+  SaaSProductCode,
+} from "@prisma/client";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
@@ -36,6 +42,7 @@ function parseDecimalInput(value: string | null | undefined) {
 
 export type ManagedCompanyRecord = {
   id: string;
+  companyId: string | null;
   name: string;
   slug: string;
   whatsapp: string;
@@ -61,11 +68,32 @@ export type ManagedCompanyRecord = {
   };
 };
 
+function toCompanyStatus(status: RestaurantContractStatus): CompanyStatus {
+  return status as unknown as CompanyStatus;
+}
+
+function toProductAccessStatus(status: RestaurantContractStatus): ProductAccessStatus {
+  return status as unknown as ProductAccessStatus;
+}
+
+async function ensureFoodProduct(tx: Prisma.TransactionClient) {
+  return tx.saaSProduct.upsert({
+    where: { code: SaaSProductCode.FOOD },
+    update: {},
+    create: {
+      code: SaaSProductCode.FOOD,
+      name: "Food",
+      description: "Operacao completa para cardapio, pedidos e delivery.",
+    },
+  });
+}
+
 export async function listManagedCompanies() {
   return prisma.restaurant.findMany({
     orderBy: [{ createdAt: "desc" }],
     select: {
       id: true,
+      companyId: true,
       name: true,
       slug: true,
       whatsapp: true,
@@ -128,7 +156,12 @@ export async function createManagedCompany(input: {
     select: { id: true },
   });
 
-  if (existingEmail) {
+  const existingPlatformUser = await prisma.platformUser.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  if (existingEmail || existingPlatformUser) {
     throw new Error("Ja existe uma empresa provisionada com este email administrativo.");
   }
 
@@ -136,8 +169,50 @@ export async function createManagedCompany(input: {
   const passwordHash = await hashPassword(temporaryPassword);
 
   return prisma.$transaction(async (tx) => {
-    const company = await tx.restaurant.create({
+    const foodProduct = await ensureFoodProduct(tx);
+    const platformCompany = await tx.company.create({
       data: {
+        name: companyName,
+        slug,
+        status: toCompanyStatus(status),
+        primaryContactName: adminName,
+        primaryContactEmail: email,
+        primaryContactPhone: primaryContactPhone,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await tx.companyProductAccess.create({
+      data: {
+        companyId: platformCompany.id,
+        productId: foodProduct.id,
+        status: toProductAccessStatus(status),
+        contractStartsAt: contractStartsAt ? new Date(`${contractStartsAt}T12:00:00.000Z`) : new Date(),
+        contractEndsAt: contractEndsAt ? new Date(`${contractEndsAt}T23:59:59.999Z`) : null,
+        monthlyPrice:
+          input.monthlyPrice && input.monthlyPrice.trim()
+            ? new Prisma.Decimal(parseDecimalInput(input.monthlyPrice))
+            : null,
+        notes: notes || null,
+      },
+    });
+
+    await tx.platformUser.create({
+      data: {
+        companyId: platformCompany.id,
+        email,
+        passwordHash,
+        name: adminName,
+        role: "COMPANY_ADMIN",
+        mustChangePassword: true,
+      },
+    });
+
+    const restaurant = await tx.restaurant.create({
+      data: {
+        companyId: platformCompany.id,
         name: companyName,
         slug,
         whatsapp: primaryContactPhone,
@@ -167,7 +242,7 @@ export async function createManagedCompany(input: {
 
     await tx.restaurantContract.create({
       data: {
-        restaurantId: company.id,
+        restaurantId: restaurant.id,
         status,
         startsAt: contractStartsAt ? new Date(`${contractStartsAt}T12:00:00.000Z`) : new Date(),
         endsAt: contractEndsAt ? new Date(`${contractEndsAt}T23:59:59.999Z`) : null,
@@ -179,7 +254,7 @@ export async function createManagedCompany(input: {
       },
     });
 
-    return company;
+    return restaurant;
   });
 }
 
@@ -194,7 +269,7 @@ export async function updateManagedCompanyContract(input: {
 
   const company = await prisma.restaurant.findUnique({
     where: { id: input.restaurantId },
-    select: { id: true },
+    select: { id: true, companyId: true },
   });
 
   if (!company) {
@@ -208,24 +283,60 @@ export async function updateManagedCompanyContract(input: {
     endsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
   };
 
-  return prisma.restaurantContract.upsert({
-    where: { restaurantId: company.id },
-    update: data,
-    create: {
-      restaurantId: company.id,
-      status: input.status,
-      startsAt: new Date(),
-      endsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
-      canceledAt: input.status === "CANCELED" ? new Date() : null,
-      notes: notes || null,
-    },
+  return prisma.$transaction(async (tx) => {
+    const contract = await tx.restaurantContract.upsert({
+      where: { restaurantId: company.id },
+      update: data,
+      create: {
+        restaurantId: company.id,
+        status: input.status,
+        startsAt: new Date(),
+        endsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
+        canceledAt: input.status === "CANCELED" ? new Date() : null,
+        notes: notes || null,
+      },
+    });
+
+    if (company.companyId) {
+      await tx.company.update({
+        where: { id: company.companyId },
+        data: {
+          status: toCompanyStatus(input.status),
+        },
+      });
+
+      const foodProduct = await ensureFoodProduct(tx);
+      await tx.companyProductAccess.upsert({
+        where: {
+          companyId_productId: {
+            companyId: company.companyId,
+            productId: foodProduct.id,
+          },
+        },
+        update: {
+          status: toProductAccessStatus(input.status),
+          contractEndsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
+          notes: notes || null,
+        },
+        create: {
+          companyId: company.companyId,
+          productId: foodProduct.id,
+          status: toProductAccessStatus(input.status),
+          contractStartsAt: new Date(),
+          contractEndsAt: endsAt ? new Date(`${endsAt}T23:59:59.999Z`) : null,
+          notes: notes || null,
+        },
+      });
+    }
+
+    return contract;
   });
 }
 
 export async function deleteManagedCompany(restaurantId: string) {
   const company = await prisma.restaurant.findUnique({
     where: { id: restaurantId },
-    select: { id: true },
+    select: { id: true, companyId: true },
   });
 
   if (!company) {
@@ -247,4 +358,8 @@ export async function deleteManagedCompany(restaurantId: string) {
   await prisma.customer.deleteMany({ where: { restaurantId } });
   await prisma.restaurantContract.deleteMany({ where: { restaurantId } });
   await prisma.restaurant.delete({ where: { id: restaurantId } });
+
+  if (company.companyId) {
+    await prisma.company.delete({ where: { id: company.companyId } });
+  }
 }

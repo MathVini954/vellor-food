@@ -56,8 +56,96 @@ enum RestaurantContractStatus {
   CANCELED
 }
 
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CANCELED
+}
+
+enum ProductAccessStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CANCELED
+}
+
+enum PlatformUserRole {
+  OWNER
+  COMPANY_ADMIN
+  STAFF
+}
+
+enum SaaSProductCode {
+  FOOD
+}
+
+model Company {
+  id                  String               @id @default(cuid())
+  name                String
+  slug                String               @unique
+  legalName           String?
+  status              CompanyStatus        @default(ACTIVE)
+  primaryContactName  String?
+  primaryContactEmail String?
+  primaryContactPhone String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  restaurants         Restaurant[]
+  platformUsers       PlatformUser[]
+  productAccesses     CompanyProductAccess[]
+
+  @@index([status])
+}
+
+model SaaSProduct {
+  id             String               @id @default(cuid())
+  code           SaaSProductCode      @unique
+  name           String
+  description    String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  companyAccesses CompanyProductAccess[]
+}
+
+model CompanyProductAccess {
+  id               String              @id @default(cuid())
+  companyId        String
+  productId        String
+  status           ProductAccessStatus @default(ACTIVE)
+  contractStartsAt DateTime            @default(now())
+  contractEndsAt   DateTime?
+  monthlyPrice     Decimal?            @db.Decimal(10, 2)
+  notes            String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  company          Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  product          SaaSProduct         @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, productId])
+  @@index([status, contractEndsAt])
+}
+
+model PlatformUser {
+  id               String           @id @default(cuid())
+  companyId        String?
+  email            String           @unique
+  passwordHash     String?
+  name             String
+  role             PlatformUserRole @default(COMPANY_ADMIN)
+  mustChangePassword Boolean        @default(false)
+  isActive         Boolean          @default(true)
+  lastLoginAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  company          Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, role])
+}
+
 model Restaurant {
   id                String      @id @default(cuid())
+  companyId          String?
   name              String
   slug              String      @unique
   whatsapp          String
@@ -89,6 +177,7 @@ model Restaurant {
   pixKey            String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+  company           Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
   customers         Customer[]
   categories        Category[]
   products          Product[]
@@ -96,6 +185,8 @@ model Restaurant {
   offers            Offer[]
   deliveryAreas     DeliveryArea[]
   contract          RestaurantContract?
+
+  @@index([companyId])
 }
 
 model RestaurantContract {
