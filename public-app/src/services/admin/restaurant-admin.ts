@@ -1,4 +1,13 @@
-import { OfferType, OrderStatus, Prisma, RestaurantContractStatus } from "@prisma/client";
+import {
+  CompanyStatus,
+  OfferType,
+  OrderStatus,
+  PlatformUserRole,
+  Prisma,
+  ProductAccessStatus,
+  RestaurantContractStatus,
+  SaaSProductCode,
+} from "@prisma/client";
 import { geocodeAddress } from "@/lib/geocoding";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
@@ -41,6 +50,32 @@ function canRestaurantAccessAdmin(contract: {
   }
 
   if (contract.endsAt && contract.endsAt.getTime() < Date.now()) {
+    return false;
+  }
+
+  return true;
+}
+
+function canCompanyAccessFood(input: {
+  companyStatus: CompanyStatus;
+  productAccess: {
+    status: ProductAccessStatus;
+    contractEndsAt: Date | null;
+  } | null;
+}) {
+  if (input.companyStatus !== "ACTIVE") {
+    return false;
+  }
+
+  if (!input.productAccess) {
+    return false;
+  }
+
+  if (input.productAccess.status !== "ACTIVE") {
+    return false;
+  }
+
+  if (input.productAccess.contractEndsAt && input.productAccess.contractEndsAt.getTime() < Date.now()) {
     return false;
   }
 
@@ -131,12 +166,263 @@ export function mapAdminOfferTypeToDb(type: AdminOfferType): OfferType {
   return map[type];
 }
 
+async function ensureFoodProduct(tx: Prisma.TransactionClient) {
+  return tx.saaSProduct.upsert({
+    where: { code: SaaSProductCode.FOOD },
+    update: {},
+    create: {
+      code: SaaSProductCode.FOOD,
+      name: "Food",
+      description: "Operacao completa para cardapio, pedidos e delivery.",
+    },
+  });
+}
+
+async function ensurePlatformIdentityForRestaurant(
+  restaurant: {
+    id: string;
+    companyId: string | null;
+    slug: string;
+    name: string;
+    adminEmail: string | null;
+    adminUserName: string | null;
+    whatsapp: string;
+    contract: {
+      status: RestaurantContractStatus;
+      startsAt: Date;
+      endsAt: Date | null;
+      monthlyPrice: Prisma.Decimal | null;
+      notes: string | null;
+    } | null;
+  },
+  options: {
+    passwordHash: string;
+    email: string;
+    userName: string;
+    mustChangePassword: boolean;
+  },
+) {
+  return prisma.$transaction(async (tx) => {
+    const foodProduct = await ensureFoodProduct(tx);
+    let companyId = restaurant.companyId;
+
+    if (!companyId) {
+      const company = await tx.company.upsert({
+        where: { slug: restaurant.slug },
+        update: {
+          name: restaurant.name,
+          status: restaurant.contract?.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
+          primaryContactName: options.userName,
+          primaryContactEmail: options.email,
+          primaryContactPhone: restaurant.whatsapp,
+        },
+        create: {
+          name: restaurant.name,
+          slug: restaurant.slug,
+          status: restaurant.contract?.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
+          primaryContactName: options.userName,
+          primaryContactEmail: options.email,
+          primaryContactPhone: restaurant.whatsapp,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      companyId = company.id;
+
+      await tx.restaurant.update({
+        where: { id: restaurant.id },
+        data: {
+          companyId,
+        },
+      });
+    } else {
+      await tx.company.update({
+        where: { id: companyId },
+        data: {
+          name: restaurant.name,
+          slug: restaurant.slug,
+          primaryContactName: options.userName,
+          primaryContactEmail: options.email,
+          primaryContactPhone: restaurant.whatsapp,
+        },
+      });
+    }
+
+    await tx.companyProductAccess.upsert({
+      where: {
+        companyId_productId: {
+          companyId,
+          productId: foodProduct.id,
+        },
+      },
+      update: {
+        status: restaurant.contract?.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
+        contractStartsAt: restaurant.contract?.startsAt ?? new Date(),
+        contractEndsAt: restaurant.contract?.endsAt ?? null,
+        monthlyPrice: restaurant.contract?.monthlyPrice ?? null,
+        notes: restaurant.contract?.notes ?? null,
+      },
+      create: {
+        companyId,
+        productId: foodProduct.id,
+        status: restaurant.contract?.status === "ACTIVE" ? "ACTIVE" : "INACTIVE",
+        contractStartsAt: restaurant.contract?.startsAt ?? new Date(),
+        contractEndsAt: restaurant.contract?.endsAt ?? null,
+        monthlyPrice: restaurant.contract?.monthlyPrice ?? null,
+        notes: restaurant.contract?.notes ?? null,
+      },
+    });
+
+    await tx.platformUser.upsert({
+      where: { email: options.email },
+      update: {
+        companyId,
+        name: options.userName,
+        passwordHash: options.passwordHash,
+        role: PlatformUserRole.COMPANY_ADMIN,
+        mustChangePassword: options.mustChangePassword,
+        isActive: true,
+        lastLoginAt: new Date(),
+      },
+      create: {
+        companyId,
+        email: options.email,
+        passwordHash: options.passwordHash,
+        name: options.userName,
+        role: PlatformUserRole.COMPANY_ADMIN,
+        mustChangePassword: options.mustChangePassword,
+        isActive: true,
+        lastLoginAt: new Date(),
+      },
+    });
+
+    return companyId;
+  });
+}
+
 export async function findRestaurantForAdminLogin(email: string, password: string) {
-  const restaurant = await prisma.restaurant.findFirst({
+  const normalizedEmail = email.toLowerCase().trim();
+  const platformUser = await prisma.platformUser.findUnique({
     where: {
-      adminEmail: email.toLowerCase().trim(),
+      email: normalizedEmail,
     },
     select: {
+      id: true,
+      companyId: true,
+      email: true,
+      passwordHash: true,
+      name: true,
+      mustChangePassword: true,
+      isActive: true,
+      company: {
+        select: {
+          id: true,
+          status: true,
+          productAccesses: {
+            where: {
+              product: {
+                code: SaaSProductCode.FOOD,
+              },
+            },
+            select: {
+              status: true,
+              contractEndsAt: true,
+            },
+            take: 1,
+          },
+          restaurants: {
+            orderBy: [{ createdAt: "asc" }],
+            select: {
+              slug: true,
+              name: true,
+              adminUserName: true,
+              adminEmail: true,
+              adminPasswordTemporary: true,
+              onboardingCompleted: true,
+              whatsapp: true,
+              address: true,
+              city: true,
+              state: true,
+              contract: {
+                select: {
+                  status: true,
+                  endsAt: true,
+                  canceledAt: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (platformUser?.passwordHash) {
+    const passwordMatches = await verifyPassword(password, platformUser.passwordHash);
+
+    if (passwordMatches) {
+      if (!platformUser.isActive) {
+        throw new Error("Acesso da empresa indisponivel. Verifique o status do contrato.");
+      }
+
+      if (!platformUser.company || !platformUser.companyId) {
+        throw new Error("Empresa nao vinculada ao usuario administrativo.");
+      }
+
+      const productAccess = platformUser.company.productAccesses[0] ?? null;
+
+      if (
+        !canCompanyAccessFood({
+          companyStatus: platformUser.company.status,
+          productAccess,
+        })
+      ) {
+        throw new Error("Acesso da empresa indisponivel. Verifique o status do contrato.");
+      }
+
+      const restaurant =
+        platformUser.company.restaurants.find((entry) => entry.adminEmail === normalizedEmail) ??
+        platformUser.company.restaurants[0];
+
+      if (!restaurant) {
+        throw new Error("Empresa sem operacao FOOD provisionada.");
+      }
+
+      if (!canRestaurantAccessAdmin(restaurant.contract)) {
+        throw new Error("Acesso da empresa indisponivel. Verifique o status do contrato.");
+      }
+
+      await prisma.platformUser.update({
+        where: { id: platformUser.id },
+        data: {
+          lastLoginAt: new Date(),
+        },
+      });
+
+      return {
+        slug: restaurant.slug,
+        name: restaurant.name,
+        adminUserName: platformUser.name || restaurant.adminUserName,
+        adminEmail: platformUser.email,
+        adminPasswordTemporary: restaurant.adminPasswordTemporary || platformUser.mustChangePassword,
+        onboardingCompleted: restaurant.onboardingCompleted,
+        whatsapp: restaurant.whatsapp,
+        address: restaurant.address,
+        city: restaurant.city,
+        state: restaurant.state,
+      };
+    }
+  }
+
+  const restaurant = await prisma.restaurant.findFirst({
+    where: {
+      adminEmail: normalizedEmail,
+    },
+    select: {
+      id: true,
+      companyId: true,
       slug: true,
       name: true,
       adminUserName: true,
@@ -151,14 +437,17 @@ export async function findRestaurantForAdminLogin(email: string, password: strin
       contract: {
         select: {
           status: true,
+          startsAt: true,
           endsAt: true,
           canceledAt: true,
+          monthlyPrice: true,
+          notes: true,
         },
       },
     },
   });
 
-  if (!restaurant) {
+  if (!restaurant || !restaurant.adminPassword) {
     return null;
   }
 
@@ -172,20 +461,43 @@ export async function findRestaurantForAdminLogin(email: string, password: strin
     throw new Error("Acesso da empresa indisponivel. Verifique o status do contrato.");
   }
 
+  const userName = restaurant.adminUserName ?? "Gerente";
+  const passwordHash =
+    restaurant.adminPassword.startsWith("scrypt:") ? restaurant.adminPassword : await hashPassword(password);
+
   if (restaurant.adminPassword && !restaurant.adminPassword.startsWith("scrypt:")) {
     await prisma.restaurant.update({
       where: { slug: restaurant.slug },
       data: {
-        adminPassword: await hashPassword(password),
+        adminPassword: passwordHash,
       },
     });
   }
 
+  await ensurePlatformIdentityForRestaurant(
+    {
+      id: restaurant.id,
+      companyId: restaurant.companyId,
+      slug: restaurant.slug,
+      name: restaurant.name,
+      adminEmail: restaurant.adminEmail,
+      adminUserName: restaurant.adminUserName,
+      whatsapp: restaurant.whatsapp,
+      contract: restaurant.contract,
+    },
+    {
+      passwordHash,
+      email: normalizedEmail,
+      userName,
+      mustChangePassword: restaurant.adminPasswordTemporary || !restaurant.onboardingCompleted,
+    },
+  );
+
   return {
     slug: restaurant.slug,
     name: restaurant.name,
-    adminUserName: restaurant.adminUserName,
-    adminEmail: restaurant.adminEmail,
+    adminUserName: userName,
+    adminEmail: restaurant.adminEmail ?? normalizedEmail,
     adminPasswordTemporary: restaurant.adminPasswordTemporary,
     onboardingCompleted: restaurant.onboardingCompleted,
     whatsapp: restaurant.whatsapp,
@@ -303,31 +615,71 @@ export async function completeRestaurantInitialSetup(input: {
   const geocodedPoint = await geocodeAddress([address, city, state, "Brasil"]);
   const passwordHash = await hashPassword(password);
 
-  const updatedRestaurant = await prisma.restaurant.update({
-    where: { slug },
-    data: {
-      name: companyName,
-      adminUserName: adminName,
-      whatsapp,
-      adminPassword: passwordHash,
-      adminPasswordTemporary: false,
-      onboardingCompleted: true,
-      address,
-      city,
-      state,
-      latitude: geocodedPoint ? new Prisma.Decimal(geocodedPoint.latitude) : null,
-      longitude: geocodedPoint ? new Prisma.Decimal(geocodedPoint.longitude) : null,
-      welcomeMessage: `Bem-vindo a operacao de ${companyName}.`,
-      isOpen: true,
-      deliveryActive: true,
-      pickupActive: true,
-    },
-    select: {
-      slug: true,
-      name: true,
-      adminUserName: true,
-      adminEmail: true,
-    },
+  const updatedRestaurant = await prisma.$transaction(async (tx) => {
+    const updated = await tx.restaurant.update({
+      where: { slug },
+      data: {
+        name: companyName,
+        adminUserName: adminName,
+        whatsapp,
+        adminPassword: passwordHash,
+        adminPasswordTemporary: false,
+        onboardingCompleted: true,
+        address,
+        city,
+        state,
+        latitude: geocodedPoint ? new Prisma.Decimal(geocodedPoint.latitude) : null,
+        longitude: geocodedPoint ? new Prisma.Decimal(geocodedPoint.longitude) : null,
+        welcomeMessage: `Bem-vindo a operacao de ${companyName}.`,
+        isOpen: true,
+        deliveryActive: true,
+        pickupActive: true,
+      },
+      select: {
+        slug: true,
+        name: true,
+        adminUserName: true,
+        adminEmail: true,
+        companyId: true,
+      },
+    });
+
+    if (updated.companyId) {
+      await tx.company.update({
+        where: { id: updated.companyId },
+        data: {
+          name: companyName,
+          primaryContactName: adminName,
+          primaryContactEmail: email,
+          primaryContactPhone: whatsapp,
+        },
+      });
+
+      await tx.platformUser.upsert({
+        where: { email },
+        update: {
+          companyId: updated.companyId,
+          name: adminName,
+          passwordHash,
+          role: PlatformUserRole.COMPANY_ADMIN,
+          mustChangePassword: false,
+          isActive: true,
+          lastLoginAt: new Date(),
+        },
+        create: {
+          companyId: updated.companyId,
+          email,
+          passwordHash,
+          name: adminName,
+          role: PlatformUserRole.COMPANY_ADMIN,
+          mustChangePassword: false,
+          isActive: true,
+          lastLoginAt: new Date(),
+        },
+      });
+    }
+
+    return updated;
   });
 
   return updatedRestaurant;
@@ -557,11 +909,13 @@ function mapSettings(restaurant: {
 
 export async function getAdminBootstrap(
   slug: string,
+  currentUserEmail?: string,
 ): Promise<AdminBootstrapPayload | null> {
   const restaurant = await prisma.restaurant.findUnique({
     where: { slug },
     select: {
       slug: true,
+      companyId: true,
       name: true,
       adminUserName: true,
       adminEmail: true,
@@ -671,8 +1025,27 @@ export async function getAdminBootstrap(
     return null;
   }
 
+  const platformUser =
+    restaurant.companyId && currentUserEmail
+      ? await prisma.platformUser.findFirst({
+          where: {
+            companyId: restaurant.companyId,
+            email: currentUserEmail.toLowerCase().trim(),
+            isActive: true,
+          },
+          select: {
+            name: true,
+            email: true,
+          },
+        })
+      : null;
+
   return {
-    session: mapRestaurantSession(restaurant),
+    session: mapRestaurantSession({
+      ...restaurant,
+      adminUserName: platformUser?.name ?? restaurant.adminUserName,
+      adminEmail: platformUser?.email ?? restaurant.adminEmail,
+    }),
     metrics: buildMetrics(restaurant.orders),
     categories: restaurant.categories.map(mapCategory),
     orders: restaurant.orders.map(mapOrder),

@@ -18,7 +18,7 @@ export async function GET(
       return auth.response;
     }
 
-    const payload = await getAdminBootstrap(slug);
+    const payload = await getAdminBootstrap(slug, auth.token.email);
 
     if (!payload) {
       return adminJson(request, { error: "Restaurante nao encontrado." }, { status: 404 });
