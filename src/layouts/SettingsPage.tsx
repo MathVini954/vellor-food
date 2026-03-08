@@ -137,9 +137,13 @@ export function SettingsPage({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const explicitPublicAppBaseUrl = (import.meta.env.VITE_PUBLIC_APP_BASE_URL as string | undefined)?.replace(/\/$/, "");
+  const adminApiBaseUrl = (import.meta.env.VITE_ADMIN_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
+  const derivedPublicAppBaseUrl = adminApiBaseUrl?.replace(/\/api\/admin$/, "");
   const publicAppBaseUrl =
-    (import.meta.env.VITE_PUBLIC_APP_BASE_URL as string | undefined)?.replace(/\/$/, "") ??
-    `${window.location.protocol}//${window.location.hostname}:3000`;
+    explicitPublicAppBaseUrl ||
+    derivedPublicAppBaseUrl ||
+    window.location.origin;
   const publicRestaurantUrl = `${publicAppBaseUrl}/r/${restaurantSlug}`;
 
   useEffect(() => {
