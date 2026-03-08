@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowRight, Phone, UserRound } from "lucide-react";
 import { useRestaurantStore } from "./restaurant-store-provider";
 import type { PublicCustomerSession, PublicRestaurant } from "@/types/public";
@@ -17,13 +16,16 @@ export function IdentificationPageClient({
   restaurant,
   initialCustomer,
 }: IdentificationPageClientProps) {
-  const router = useRouter();
   const { setCustomer, setGuestAllowed } = useRestaurantStore();
   const [name, setName] = useState(initialCustomer?.name ?? "");
   const [phone, setPhone] = useState(initialCustomer?.phone ?? "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
+
+  function navigateToStorefront() {
+    window.location.assign(`/r/${slug}`);
+  }
 
   async function handleIdentify(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,8 +48,7 @@ export function IdentificationPageClient({
 
     setCustomer(payload.customer);
     setGuestAllowed(true);
-    router.push(`/r/${slug}`);
-    router.refresh();
+    navigateToStorefront();
   }
 
   async function handleContinueAsGuest() {
@@ -65,8 +66,7 @@ export function IdentificationPageClient({
     }
 
     setGuestAllowed(true);
-    router.push(`/r/${slug}`);
-    router.refresh();
+    navigateToStorefront();
   }
 
   return (
