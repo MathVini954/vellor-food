@@ -1,4 +1,5 @@
 import { IBM_Plex_Mono } from "next/font/google";
+import { redirect } from "next/navigation";
 import {
   Activity,
   Building2,
@@ -14,6 +15,11 @@ import {
 } from "lucide-react";
 import { createCompanyAction, deleteCompanyAction, updateCompanyStatusAction } from "./actions";
 import { isValidDevOwnerToken } from "@/lib/dev-owner";
+import {
+  hasOwnerConsoleCredentialsConfigured,
+  isOwnerConsoleAuthenticated,
+} from "@/lib/owner-auth";
+import { logoutOwnerAction } from "./auth-actions";
 import { listManagedCompanies } from "@/services/platform/owner-dashboard";
 
 const plexMono = IBM_Plex_Mono({
@@ -73,16 +79,35 @@ export default async function DevOwnerPage({
 }: {
   searchParams: Promise<{ token?: string }>;
 }) {
+  const ownerConsoleUrl = process.env.OWNER_CONSOLE_URL?.trim();
+
+  if (ownerConsoleUrl) {
+    redirect(ownerConsoleUrl);
+  }
+
   const { token } = await searchParams;
-  const hasToken = isValidDevOwnerToken(token);
-  const companies = hasToken ? await listManagedCompanies() : [];
+  const hasOwnerCredentials = hasOwnerConsoleCredentialsConfigured();
+  const hasOwnerSession = hasOwnerCredentials ? await isOwnerConsoleAuthenticated() : false;
+
+  if (hasOwnerCredentials && !hasOwnerSession) {
+    redirect("/dev/owner/login");
+  }
+
+  const hasLegacyToken = !hasOwnerCredentials && isValidDevOwnerToken(token);
+  const hasAccess = hasOwnerSession || hasLegacyToken;
+  const authMode = hasOwnerSession
+    ? "owner session"
+    : hasLegacyToken
+      ? "legacy query token"
+      : "locked";
+  const companies = hasAccess ? await listManagedCompanies() : [];
   const totalCompanies = companies.length;
   const activeCompanies = companies.filter((company) => company.contract?.status === "ACTIVE").length;
   const onboardingPending = companies.filter(
     (company) => company.adminPasswordTemporary || !company.onboardingCompleted,
   ).length;
   const suspendedCompanies = companies.filter((company) => company.contract?.status === "SUSPENDED").length;
-  const runtimeLines = hasToken
+  const runtimeLines = hasAccess
     ? companies.slice(0, 6).map((company, index) => {
         const onboardingState =
           company.adminPasswordTemporary || !company.onboardingCompleted
@@ -92,8 +117,8 @@ export default async function DevOwnerPage({
         return `[${String(index + 1).padStart(2, "0")}] sync.company("${company.slug}") => contract=${company.contract?.status ?? "ACTIVE"} onboarding=${onboardingState}`;
       })
     : [
-        "[01] auth.guard => missing query token",
-        "[02] open /dev/owner?token=DEV_OWNER_ACCESS_TOKEN",
+        "[01] auth.guard => owner session missing",
+        "[02] open /dev/owner/login",
         "[03] datasource => prisma + supabase",
       ];
 
@@ -184,6 +209,16 @@ export default async function DevOwnerPage({
                   <div className="rounded-2xl border border-white/10 bg-black px-3 py-2 text-xs uppercase tracking-[0.28em] text-zinc-500">
                     owner mode
                   </div>
+                  {hasOwnerSession ? (
+                    <form action={logoutOwnerAction}>
+                      <button
+                        className="rounded-2xl border border-white/10 bg-black px-3 py-2 text-xs uppercase tracking-[0.28em] text-zinc-500 transition hover:border-white/20 hover:text-zinc-300"
+                        type="submit"
+                      >
+                        logout
+                      </button>
+                    </form>
+                  ) : null}
                 </div>
               </header>
 
@@ -205,16 +240,16 @@ export default async function DevOwnerPage({
                       </div>
 
                       <div className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-xs leading-6 text-zinc-500">
-                        {hasToken ? (
+                        {hasAccess ? (
                           <>
-                            <p>token.guard = unlocked</p>
-                            <p>auth.mode = dev owner query token</p>
+                            <p>access.guard = unlocked</p>
+                            <p>auth.mode = {authMode}</p>
                             <p>datasource = supabase / prisma</p>
                           </>
                         ) : (
                           <>
-                            <p>token.guard = locked</p>
-                            <p>open = /dev/owner?token=DEV_OWNER_ACCESS_TOKEN</p>
+                            <p>access.guard = locked</p>
+                            <p>open = /dev/owner/login</p>
                             <p>datasource = pending</p>
                           </>
                         )}
@@ -260,9 +295,17 @@ export default async function DevOwnerPage({
                       </span>
                     </div>
 
-                    {hasToken ? (
+                    {hasAccess ? (
                       <form action={createCompanyAction} className="mt-5 space-y-4">
-                        <input name="token" type="hidden" value={token} />
+                        {hasLegacyToken ? (
+                          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4 text-sm leading-7 text-amber-100">
+                            Modo legado ativo. Configure `OWNER_CONSOLE_EMAIL` e
+                            `OWNER_CONSOLE_PASSWORD` para remover o token da URL.
+                          </div>
+                        ) : null}
+                        {!hasOwnerCredentials ? (
+                          <input name="token" type="hidden" value={token} />
+                        ) : null}
                         <div className="grid gap-3">
                           <input
                             className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
@@ -343,10 +386,11 @@ export default async function DevOwnerPage({
                       </form>
                     ) : (
                       <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm leading-7 text-amber-100">
-                        Token ausente. O console fica somente leitura ate receber a query
+                        Autenticacao do owner ausente. Entre pelo
                         <span className="mx-2 rounded bg-black px-2 py-1 text-xs text-amber-200">
-                          ?token=...
+                          /dev/owner/login
                         </span>
+                        para liberar o console.
                       </div>
                     )}
                   </section>
@@ -489,7 +533,9 @@ export default async function DevOwnerPage({
                             </div>
 
                             <form action={deleteCompanyAction}>
-                              <input name="token" type="hidden" value={token} />
+                              {!hasOwnerCredentials ? (
+                                <input name="token" type="hidden" value={token} />
+                              ) : null}
                               <input name="restaurantId" type="hidden" value={company.id} />
                               <button
                                 className="inline-flex items-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 transition hover:bg-rose-500/20"
@@ -502,7 +548,9 @@ export default async function DevOwnerPage({
                           </div>
 
                           <form action={updateCompanyStatusAction} className="mt-5 space-y-3">
-                            <input name="token" type="hidden" value={token} />
+                            {!hasOwnerCredentials ? (
+                              <input name="token" type="hidden" value={token} />
+                            ) : null}
                             <input name="restaurantId" type="hidden" value={company.id} />
                             <div className="grid gap-3 md:grid-cols-2">
                               <select

@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { RestaurantContractStatus } from "@prisma/client";
 import {
-  assertOwnerConsoleMutationAccess,
+  authenticateOwnerConsole,
+  clearOwnerConsoleSession,
+  createOwnerConsoleSession,
   hasOwnerConsoleCredentialsConfigured,
+  requireOwnerConsoleSession,
 } from "@/lib/owner-auth";
 import {
   createManagedCompany,
@@ -13,19 +16,36 @@ import {
   updateManagedCompanyContract,
 } from "@/services/platform/owner-dashboard";
 
-function redirectBack(legacyToken?: string) {
-  revalidatePath("/dev/owner");
+export async function loginOwnerAction(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
 
-  if (!hasOwnerConsoleCredentialsConfigured() && legacyToken) {
-    redirect(`/dev/owner?token=${encodeURIComponent(legacyToken)}`);
+  if (!hasOwnerConsoleCredentialsConfigured()) {
+    redirect("/login?error=not-configured");
   }
 
-  redirect("/dev/owner");
+  const authenticated = await authenticateOwnerConsole({ email, password });
+
+  if (!authenticated) {
+    redirect("/login?error=invalid");
+  }
+
+  await createOwnerConsoleSession(email);
+  redirect("/");
+}
+
+export async function logoutOwnerAction() {
+  await clearOwnerConsoleSession();
+  redirect("/login");
+}
+
+function refreshDashboard() {
+  revalidatePath("/");
+  redirect("/");
 }
 
 export async function createCompanyAction(formData: FormData) {
-  const legacyToken = String(formData.get("token") ?? "");
-  await assertOwnerConsoleMutationAccess(legacyToken);
+  await requireOwnerConsoleSession();
 
   await createManagedCompany({
     companyName: String(formData.get("companyName") ?? ""),
@@ -40,12 +60,11 @@ export async function createCompanyAction(formData: FormData) {
     status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
   });
 
-  redirectBack(legacyToken);
+  refreshDashboard();
 }
 
 export async function updateCompanyStatusAction(formData: FormData) {
-  const legacyToken = String(formData.get("token") ?? "");
-  await assertOwnerConsoleMutationAccess(legacyToken);
+  await requireOwnerConsoleSession();
 
   await updateManagedCompanyContract({
     restaurantId: String(formData.get("restaurantId") ?? ""),
@@ -54,14 +73,11 @@ export async function updateCompanyStatusAction(formData: FormData) {
     notes: String(formData.get("notes") ?? ""),
   });
 
-  redirectBack(legacyToken);
+  refreshDashboard();
 }
 
 export async function deleteCompanyAction(formData: FormData) {
-  const legacyToken = String(formData.get("token") ?? "");
-  await assertOwnerConsoleMutationAccess(legacyToken);
-
+  await requireOwnerConsoleSession();
   await deleteManagedCompany(String(formData.get("restaurantId") ?? ""));
-
-  redirectBack(legacyToken);
+  refreshDashboard();
 }

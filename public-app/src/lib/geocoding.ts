@@ -17,6 +17,15 @@ export type ReverseGeocodedAddress = {
   formattedAddress: string;
 };
 
+export type ZipCodeLookupAddress = {
+  zipCode: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  formattedAddress: string;
+};
+
 function buildSearchText(parts: Array<string | null | undefined>) {
   return parts
     .map((part) => String(part ?? "").trim())
@@ -47,6 +56,20 @@ function buildQueryVariants(parts: Array<string | null | undefined>) {
   ].filter(Boolean);
 
   return [...new Set(variants)];
+}
+
+function normalizeZipCode(zipCode: string) {
+  return String(zipCode).replace(/\D/g, "").slice(0, 8);
+}
+
+function formatZipCode(zipCode: string) {
+  const normalized = normalizeZipCode(zipCode);
+
+  if (normalized.length <= 5) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, 5)}-${normalized.slice(5)}`;
 }
 
 export async function geocodeAddress(
@@ -169,5 +192,56 @@ export async function reverseGeocodeCoordinates(
     city: address.city?.trim() || address.town?.trim() || address.village?.trim() || "",
     state: address.state?.trim() ?? "",
     formattedAddress: payload.display_name?.trim() ?? "",
+  };
+}
+
+export async function lookupZipCode(zipCode: string): Promise<ZipCodeLookupAddress | null> {
+  const normalized = normalizeZipCode(zipCode);
+
+  if (normalized.length !== 8) {
+    return null;
+  }
+
+  const response = await fetch(`https://viacep.com.br/ws/${normalized}/json/`, {
+    next: { revalidate: 60 * 60 * 24 },
+  });
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as {
+    erro?: boolean;
+    cep?: string;
+    logradouro?: string;
+    bairro?: string;
+    localidade?: string;
+    uf?: string;
+  };
+
+  if (payload.erro) {
+    return null;
+  }
+
+  const formattedZipCode = formatZipCode(payload.cep ?? normalized);
+  const street = payload.logradouro?.trim() ?? "";
+  const neighborhood = payload.bairro?.trim() ?? "";
+  const city = payload.localidade?.trim() ?? "";
+  const state = payload.uf?.trim() ?? "";
+
+  return {
+    zipCode: formattedZipCode,
+    street,
+    neighborhood,
+    city,
+    state,
+    formattedAddress: [
+      street,
+      neighborhood,
+      [city, state].filter(Boolean).join(" - "),
+      formattedZipCode ? `CEP ${formattedZipCode}` : "",
+    ]
+      .filter(Boolean)
+      .join(", "),
   };
 }

@@ -58,8 +58,9 @@ export async function POST(
 
     const response = NextResponse.json({ customer });
     response.cookies.set(customerCookieName(slug), customer.id, {
-      httpOnly: false,
+      httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 60 * 60 * 24 * 30,
     });

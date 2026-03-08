@@ -36,12 +36,35 @@ type CheckoutPageClientProps = {
   initialCustomer: PublicCustomerSession | null;
 };
 
+type ZipCodeLookupResult = {
+  zipCode: string;
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  formattedAddress: string;
+};
+
 const paymentOptions: Array<{ value: PaymentMethod; label: string }> = [
   { value: "CASH", label: "Dinheiro" },
   { value: "PIX", label: "Pix" },
   { value: "CARD_ON_DELIVERY", label: "Cartao na entrega" },
   { value: "PAY_ON_PICKUP", label: "Pagar na retirada" },
 ];
+
+function normalizeZipCode(zipCode: string) {
+  return String(zipCode).replace(/\D/g, "").slice(0, 8);
+}
+
+function formatZipCode(zipCode: string) {
+  const normalized = normalizeZipCode(zipCode);
+
+  if (normalized.length <= 5) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, 5)}-${normalized.slice(5)}`;
+}
 
 export function CheckoutPageClient({
   slug,
@@ -65,6 +88,9 @@ export function CheckoutPageClient({
   const [deliveryQuoteError, setDeliveryQuoteError] = useState("");
   const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
   const [zipCode, setZipCode] = useState("");
+  const [zipCodeResolvedLocation, setZipCodeResolvedLocation] = useState("");
+  const [isResolvingZipCode, setIsResolvingZipCode] = useState(false);
+  const [zipCodeLookupError, setZipCodeLookupError] = useState("");
   const [street, setStreet] = useState(customer?.address ?? initialCustomer?.address ?? "");
   const [streetNumber, setStreetNumber] = useState("");
   const [form, setForm] = useState<CheckoutFormState>({
@@ -106,6 +132,69 @@ export function CheckoutPageClient({
       customerAddress: nextAddress,
     }));
   }, [street, streetNumber, zipCode]);
+
+  useEffect(() => {
+    if (form.orderType !== "DELIVERY") {
+      return;
+    }
+
+    const normalizedZipCode = normalizeZipCode(zipCode);
+
+    if (normalizedZipCode.length !== 8) {
+      setIsResolvingZipCode(false);
+      setZipCodeLookupError("");
+      setZipCodeResolvedLocation("");
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setIsResolvingZipCode(true);
+        setZipCodeLookupError("");
+
+        const response = await fetch("/api/public/address-from-zip", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ zipCode: normalizedZipCode }),
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as ZipCodeLookupResult & { error?: string };
+
+        if (!response.ok) {
+          throw new Error(payload.error || "Nao foi possivel localizar esse CEP.");
+        }
+
+        setZipCode(payload.zipCode ? formatZipCode(payload.zipCode) : formatZipCode(normalizedZipCode));
+        setStreet((current) => payload.street || current);
+        setForm((current) => ({
+          ...current,
+          customerNeighborhood: payload.neighborhood || current.customerNeighborhood,
+        }));
+        setZipCodeResolvedLocation([payload.city, payload.state].filter(Boolean).join(" - "));
+      } catch (lookupError) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setZipCodeResolvedLocation("");
+        setZipCodeLookupError(
+          lookupError instanceof Error
+            ? lookupError.message
+            : "Nao foi possivel localizar esse CEP.",
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsResolvingZipCode(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [form.orderType, zipCode]);
 
   const enabledPaymentOptions = paymentOptions.filter((option) => {
     if (option.value === "CASH") {
@@ -219,9 +308,11 @@ export function CheckoutPageClient({
   }
 
   function handleApplyMapLocation(address: SelectedMapAddress) {
-    setZipCode(address.zipCode);
+    setZipCode(address.zipCode ? formatZipCode(address.zipCode) : "");
     setStreet(address.street || address.formattedAddress);
     setStreetNumber(address.number);
+    setZipCodeLookupError("");
+    setZipCodeResolvedLocation([address.city, address.state].filter(Boolean).join(" - "));
     setForm((current) => ({
       ...current,
       customerNeighborhood: address.neighborhood,
@@ -469,8 +560,22 @@ export function CheckoutPageClient({
                 className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
                 placeholder="CEP"
                 value={zipCode}
-                onChange={(event) => setZipCode(event.target.value)}
+                onChange={(event) => {
+                  setZipCode(formatZipCode(event.target.value));
+                  setZipCodeLookupError("");
+                }}
               />
+              {isResolvingZipCode ? (
+                <p className="text-xs text-slate-500">Buscando endereco pelo CEP...</p>
+              ) : null}
+              {!isResolvingZipCode && zipCodeResolvedLocation ? (
+                <p className="text-xs text-emerald-700">
+                  Endereco localizado em {zipCodeResolvedLocation}. Confira rua e numero.
+                </p>
+              ) : null}
+              {!isResolvingZipCode && zipCodeLookupError ? (
+                <p className="text-xs text-rose-600">{zipCodeLookupError}</p>
+              ) : null}
               <input
                 className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
                 placeholder="Rua"

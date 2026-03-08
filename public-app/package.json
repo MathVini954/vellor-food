@@ -12,6 +12,7 @@
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "db:seed": "node prisma/seed.cjs",
+    "db:refresh:bistro": "node scripts/refresh-bistro-demo.cjs",
     "db:local:start": "powershell -ExecutionPolicy Bypass -File ./scripts/local-postgres.ps1 start",
     "db:local:stop": "powershell -ExecutionPolicy Bypass -File ./scripts/local-postgres.ps1 stop",
     "db:local:status": "powershell -ExecutionPolicy Bypass -File ./scripts/local-postgres.ps1 status"
