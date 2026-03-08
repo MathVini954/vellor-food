@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.vercel/
+.env
+.env.local
+.env.production
+*.log
+*.tsbuildinfo
+
+public-app/node_modules/
+public-app/.next/
+public-app/.env
+public-app/.vercel/

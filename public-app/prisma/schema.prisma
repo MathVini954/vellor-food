@@ -1,0 +1,242 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrderStatus {
+  NEW
+  ACCEPTED
+  PREPARING
+  SENT
+  DELIVERED
+  CANCELED
+}
+
+enum PaymentMethod {
+  CASH
+  PIX
+  CARD_ON_DELIVERY
+  PAY_ON_PICKUP
+}
+
+enum PaymentStatus {
+  PENDING
+  AWAITING_CONFIRMATION
+  PAID
+  FAILED
+  CANCELED
+}
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+}
+
+enum OfferType {
+  ALL_ITEMS
+  CATEGORY
+  DISH_OF_THE_DAY
+  SPECIFIC_PROMOTION
+}
+
+enum RestaurantContractStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  CANCELED
+}
+
+model Restaurant {
+  id                String      @id @default(cuid())
+  name              String
+  slug              String      @unique
+  whatsapp          String
+  adminEmail        String?     @unique
+  adminPassword     String?
+  adminPasswordTemporary Boolean @default(false)
+  adminUserName     String?
+  onboardingCompleted Boolean   @default(true)
+  address           String?
+  city              String?
+  state             String?
+  latitude          Decimal?    @db.Decimal(10, 7)
+  longitude         Decimal?    @db.Decimal(10, 7)
+  logoUrl           String?
+  primaryColor      String?
+  secondaryColor    String?
+  bannerUrl         String?
+  welcomeMessage    String?
+  workingHours      String?
+  deliveryFee       Decimal     @default(0) @db.Decimal(10, 2)
+  freeDeliveryRadiusKm Decimal  @default(0) @db.Decimal(10, 2)
+  minimumOrderValue Decimal     @default(0) @db.Decimal(10, 2)
+  isOpen            Boolean     @default(true)
+  deliveryActive    Boolean     @default(true)
+  pickupActive      Boolean     @default(true)
+  acceptCash        Boolean     @default(true)
+  acceptPix         Boolean     @default(true)
+  acceptCardOnDelivery Boolean  @default(true)
+  pixKey            String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  customers         Customer[]
+  categories        Category[]
+  products          Product[]
+  orders            Order[]
+  offers            Offer[]
+  deliveryAreas     DeliveryArea[]
+  contract          RestaurantContract?
+}
+
+model RestaurantContract {
+  id            String                   @id @default(cuid())
+  restaurantId  String                   @unique
+  status        RestaurantContractStatus @default(ACTIVE)
+  startsAt      DateTime                 @default(now())
+  endsAt        DateTime?
+  canceledAt    DateTime?
+  monthlyPrice  Decimal?                 @db.Decimal(10, 2)
+  notes         String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  restaurant    Restaurant               @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([status, endsAt])
+}
+
+model Customer {
+  id           String    @id @default(cuid())
+  restaurantId String
+  name         String
+  phone        String
+  neighborhood String?
+  address      String?
+  isBlocked    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders       Order[]
+
+  @@unique([restaurantId, phone])
+  @@index([restaurantId])
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  sortOrder    Int        @default(0)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  products     Product[]
+
+  @@index([restaurantId, sortOrder])
+}
+
+model Product {
+  id           String     @id @default(cuid())
+  restaurantId String
+  categoryId   String
+  name         String
+  description  String?
+  price        Decimal    @db.Decimal(10, 2)
+  imageUrl     String?
+  isActive     Boolean    @default(true)
+  customizationOptions Json?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  category     Category   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems   OrderItem[]
+
+  @@index([restaurantId, categoryId])
+}
+
+model Order {
+  id                   String         @id @default(cuid())
+  restaurantId         String
+  customerId           String
+  customerName         String
+  customerPhone        String
+  customerAddress      String?
+  customerNeighborhood String?
+  subtotal             Decimal        @db.Decimal(10, 2)
+  deliveryFee          Decimal        @db.Decimal(10, 2)
+  total                Decimal        @db.Decimal(10, 2)
+  status               OrderStatus    @default(NEW)
+  orderType            OrderType      @default(DELIVERY)
+  paymentMethod        PaymentMethod
+  paymentStatus        PaymentStatus  @default(PENDING)
+  notes                String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  restaurant           Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  customer             Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items                OrderItem[]
+
+  @@index([restaurantId, createdAt])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  productId  String?
+  productName String
+  unitPrice  Decimal  @db.Decimal(10, 2)
+  quantity   Int
+  totalPrice Decimal  @db.Decimal(10, 2)
+  customizations String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+}
+
+model Offer {
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  type         OfferType
+  discountLabel String
+  appliesTo    String
+  productIds   String[]   @default([])
+  categoryIds  String[]   @default([])
+  startDate    DateTime
+  endDate      DateTime
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, isActive])
+}
+
+model DeliveryArea {
+  id           String     @id @default(cuid())
+  restaurantId String
+  name         String
+  fee          Decimal    @default(0) @db.Decimal(10, 2)
+  isFree       Boolean    @default(false)
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, sortOrder])
+  @@unique([restaurantId, name])
+}

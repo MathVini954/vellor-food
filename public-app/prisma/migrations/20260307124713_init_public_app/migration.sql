@@ -1,0 +1,1 @@
+-- This migration was superseded by 20260307090000_init_public_app.
