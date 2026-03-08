@@ -7,6 +7,10 @@ const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SETUP_TOKEN_TTL_MS = 2 * 60 * 60 * 1000;
 const ADMIN_SESSION_COOKIE = "vellor_admin_session";
 
+function getAdminCookieSameSite(): "lax" | "none" {
+  return process.env.NODE_ENV === "production" ? "none" : "lax";
+}
+
 type SignedTokenPayloadBase = {
   ver: number;
   kind: "access" | "setup";
@@ -177,7 +181,7 @@ export function attachAdminSessionCookie(response: NextResponse, token: string) 
     name: ADMIN_SESSION_COOKIE,
     value: token,
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: getAdminCookieSameSite(),
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: TOKEN_TTL_MS / 1000,
@@ -191,7 +195,7 @@ export function clearAdminSessionCookie(response: NextResponse) {
     name: ADMIN_SESSION_COOKIE,
     value: "",
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: getAdminCookieSameSite(),
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 0,
