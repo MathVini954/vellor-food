@@ -90,6 +90,13 @@ export default async function CompanyDetailPage({
               Abrir app publico
             </a>
           ) : null}
+          <Link
+            href={`/companies/${company.companyId}/orders`}
+            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-zinc-200 transition hover:bg-white/[0.08]"
+          >
+            <ReceiptText size={15} />
+            Central de pedidos
+          </Link>
           {company.links.adminUrl ? (
             <a
               href={company.links.adminUrl}
@@ -402,15 +409,24 @@ export default async function CompanyDetailPage({
               <h2 className="mt-3 text-2xl font-semibold text-white">Pedidos recentes do tenant</h2>
             </div>
             {company.links.adminUrl ? (
-              <a
-                href={company.links.adminUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-emerald-200 transition hover:text-white"
-              >
-                Abrir gerencial
-                <ArrowRight size={14} />
-              </a>
+              <div className="flex items-center gap-4">
+                <Link
+                  href={`/companies/${company.companyId}/orders`}
+                  className="inline-flex items-center gap-2 text-sm text-zinc-300 transition hover:text-white"
+                >
+                  Abrir central owner
+                  <ArrowRight size={14} />
+                </Link>
+                <a
+                  href={company.links.adminUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 text-sm text-emerald-200 transition hover:text-white"
+                >
+                  Abrir gerencial
+                  <ArrowRight size={14} />
+                </a>
+              </div>
             ) : null}
           </div>
 

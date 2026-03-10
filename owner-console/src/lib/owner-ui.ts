@@ -64,6 +64,53 @@ export function readSearchParam(value: string | string[] | undefined) {
   return value ?? "";
 }
 
+export function formatOrderChannel(orderType: string) {
+  if (orderType === "DINE_IN") {
+    return "Mesa";
+  }
+
+  if (orderType === "PICKUP") {
+    return "Retirada";
+  }
+
+  return "Online";
+}
+
+export function formatOrderStatus(status: string) {
+  const labels: Record<string, string> = {
+    NEW: "Novo",
+    ACCEPTED: "Aceito",
+    PREPARING: "Em preparo",
+    SENT: "Enviado",
+    DELIVERED: "Entregue",
+    CANCELED: "Cancelado",
+  };
+
+  return labels[status] ?? status;
+}
+
+export function formatPaymentStatus(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: "Pendente",
+    PAID: "Pago",
+    FAILED: "Falhou",
+    REFUNDED: "Estornado",
+  };
+
+  return labels[status] ?? status;
+}
+
+export function formatPaymentMethod(method: string) {
+  const labels: Record<string, string> = {
+    CASH: "Dinheiro",
+    PIX: "Pix",
+    CARD_ON_DELIVERY: "Cartao na entrega",
+    PAY_ON_PICKUP: "Pagamento no caixa",
+  };
+
+  return labels[method] ?? method;
+}
+
 export type OwnerFeedback = {
   tone: "success" | "error";
   message: string;

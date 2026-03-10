@@ -312,6 +312,31 @@ export type ManagedCompanyDetail = {
   provisioningJobs: ManagedProvisioningJobRecord[];
 };
 
+export type ManagedCompanyOrderRecord = {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  total: Prisma.Decimal;
+  status: string;
+  orderType: string;
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt: Date;
+  notes: string | null;
+  address: string | null;
+  neighborhood: string | null;
+  tableSessionId: string | null;
+  tableLabel: string | null;
+  itemCount: number;
+  items: Array<{
+    id: string;
+    productName: string;
+    quantity: number;
+    totalPrice: Prisma.Decimal;
+    customizations: string | null;
+  }>;
+};
+
 export async function listManagedCompanies(query?: string) {
   const companies = await prisma.company.findMany({
     orderBy: [{ createdAt: "desc" }],
@@ -780,6 +805,108 @@ export async function getManagedCompanyDetail(companyId: string) {
       errorMessage: job.errorMessage,
     })),
   } satisfies ManagedCompanyDetail;
+}
+
+export async function listManagedCompanyOrders(companyId: string) {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      restaurants: {
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          orders: {
+            orderBy: [{ createdAt: "desc" }],
+            take: 120,
+            select: {
+              id: true,
+              customerName: true,
+              customerPhone: true,
+              total: true,
+              status: true,
+              orderType: true,
+              paymentMethod: true,
+              paymentStatus: true,
+              createdAt: true,
+              notes: true,
+              customerAddress: true,
+              customerNeighborhood: true,
+              tableSessionId: true,
+              tableSession: {
+                select: {
+                  diningTable: {
+                    select: {
+                      label: true,
+                    },
+                  },
+                },
+              },
+              items: {
+                orderBy: [{ createdAt: "asc" }],
+                select: {
+                  id: true,
+                  productName: true,
+                  quantity: true,
+                  totalPrice: true,
+                  customizations: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!company) {
+    return null;
+  }
+
+  const restaurant = company.restaurants[0] ?? null;
+
+  return {
+    companyId: company.id,
+    companyName: company.name,
+    companySlug: company.slug,
+    restaurant: restaurant
+      ? {
+          id: restaurant.id,
+          name: restaurant.name,
+          slug: restaurant.slug,
+        }
+      : null,
+    orders:
+      restaurant?.orders.map((order) => ({
+        id: order.id,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        total: order.total,
+        status: order.status,
+        orderType: order.orderType,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+        notes: order.notes,
+        address: order.customerAddress,
+        neighborhood: order.customerNeighborhood,
+        tableSessionId: order.tableSessionId,
+        tableLabel: order.tableSession?.diningTable.label ?? null,
+        itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+        items: order.items.map((item) => ({
+          id: item.id,
+          productName: item.productName,
+          quantity: item.quantity,
+          totalPrice: item.totalPrice,
+          customizations: item.customizations,
+        })),
+      })) ?? [],
+  };
 }
 
 export async function createManagedCompany(input: {
