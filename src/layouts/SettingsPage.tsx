@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../components/AdminShell";
 import { FormSelect } from "../components/FormSelect";
 import { IosToggle } from "../components/IosToggle";
-import type { AdminSection, RestaurantSettings } from "../types/dashboard";
+import type { AdminSection, FeatureAccess, RestaurantSettings } from "../types/dashboard";
 
 type SettingsPageProps = {
   restaurantSlug: string;
   restaurantName: string;
   userName: string;
   initialSettings: RestaurantSettings;
+  featureAccess: FeatureAccess;
   onLogout: () => void;
   onNavigate: (item: AdminSection) => void;
   onSaveSettings: (settings: RestaurantSettings) => Promise<void>;
@@ -123,6 +124,7 @@ export function SettingsPage({
   restaurantName,
   userName,
   initialSettings,
+  featureAccess,
   onLogout,
   onNavigate,
   onSaveSettings,
@@ -145,6 +147,11 @@ export function SettingsPage({
     derivedPublicAppBaseUrl ||
     window.location.origin;
   const publicRestaurantUrl = `${publicAppBaseUrl}/r/${restaurantSlug}`;
+  const [showDigitalMenuQr, setShowDigitalMenuQr] = useState(false);
+  const digitalMenuUrl = featureAccess.digitalMenuUrl;
+  const digitalMenuQrCodeUrl = digitalMenuUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(digitalMenuUrl)}`
+    : null;
 
   useEffect(() => {
     setSettings(initialSettings);
@@ -152,6 +159,17 @@ export function SettingsPage({
     setRestaurantHours(parsedWorkingHours.restaurantHours);
     setRestaurantStatus(parsedWorkingHours.restaurantStatus);
   }, [initialSettings]);
+
+  async function handleCopyLink(value: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setSaveMessage(successMessage);
+    } catch {
+      setSaveMessage("Nao foi possivel copiar o link.");
+    }
+
+    window.setTimeout(() => setSaveMessage(""), 2500);
+  }
 
   async function handleImageFileSelection(
     file: File | null,
@@ -404,15 +422,8 @@ export function SettingsPage({
               <button
                 className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                 type="button"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(publicRestaurantUrl);
-                    setSaveMessage("Link do app web copiado.");
-                    window.setTimeout(() => setSaveMessage(""), 2500);
-                  } catch {
-                    setSaveMessage("Nao foi possivel copiar o link.");
-                    window.setTimeout(() => setSaveMessage(""), 2500);
-                  }
+                onClick={() => {
+                  void handleCopyLink(publicRestaurantUrl, "Link do app web copiado.");
                 }}
               >
                 Copiar link
@@ -426,6 +437,97 @@ export function SettingsPage({
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="space-y-4 rounded-[28px] border border-slate-200 bg-slate-50 p-5 lg:col-span-2">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Link do cardapio digital</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Esse e o link fixo do cardapio de mesa deste restaurante. Use para QR code e
+              materiais impressos nas mesas.
+            </p>
+          </div>
+
+          {featureAccess.digitalMenuEnabled && digitalMenuUrl ? (
+            <>
+              <div className="flex flex-col gap-3 rounded-[22px] border border-slate-200 bg-white p-4 sm:flex-row sm:items-center">
+                <div className="min-w-0 flex-1 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <span className="block truncate font-medium">{digitalMenuUrl}</span>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    type="button"
+                    onClick={() => {
+                      void handleCopyLink(digitalMenuUrl, "Link do cardapio digital copiado.");
+                    }}
+                  >
+                    Copiar link
+                  </button>
+                  <button
+                    className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                    type="button"
+                    onClick={() => setShowDigitalMenuQr((current) => !current)}
+                  >
+                    {showDigitalMenuQr ? "Ocultar QR code" : "Gerar QR code"}
+                  </button>
+                  <button
+                    className="rounded-2xl bg-[#171b38] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0f1730]"
+                    type="button"
+                    onClick={() => window.open(digitalMenuUrl, "_blank", "noopener,noreferrer")}
+                  >
+                    Abrir cardapio digital
+                  </button>
+                </div>
+              </div>
+
+              {showDigitalMenuQr && digitalMenuQrCodeUrl ? (
+                <div className="rounded-[22px] border border-slate-200 bg-white p-5">
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+                    <div className="flex justify-center">
+                      <img
+                        alt="QR code do cardapio digital"
+                        className="h-52 w-52 rounded-3xl border border-slate-200 bg-white p-3"
+                        src={digitalMenuQrCodeUrl}
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold text-slate-900">
+                        QR code fixo deste restaurante
+                      </p>
+                      <p className="text-sm leading-6 text-slate-500">
+                        Esse QR aponta para o cardapio digital de mesa e nao muda enquanto o token
+                        do restaurante permanecer o mesmo.
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                          type="button"
+                          onClick={() => window.open(digitalMenuQrCodeUrl, "_blank", "noopener,noreferrer")}
+                        >
+                          Abrir imagem do QR
+                        </button>
+                        <a
+                          className="rounded-2xl bg-[#171b38] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0f1730]"
+                          href={digitalMenuQrCodeUrl}
+                          download={`qr-cardapio-${restaurantSlug}.png`}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Baixar QR code
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="rounded-[22px] border border-dashed border-slate-200 bg-white px-5 py-5 text-sm leading-6 text-slate-500">
+              O pacote de cardapio digital ainda nao esta liberado para este restaurante.
+            </div>
+          )}
         </div>
       </div>
     );

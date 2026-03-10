@@ -836,6 +836,7 @@ export default function App() {
           restaurantName={restaurantName}
           userName={userName}
           initialSettings={bootstrap.settings}
+          featureAccess={bootstrap.featureAccess}
           onLogout={handleLogout}
           onNavigate={navigateToSection}
           onSaveSettings={handleSaveSettings}
