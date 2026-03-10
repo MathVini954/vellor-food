@@ -95,6 +95,32 @@ function asArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function resolveFeatureAccessUrl(value: unknown) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  const explicitPublicAppBaseUrl = (import.meta.env.VITE_PUBLIC_APP_BASE_URL as string | undefined)?.replace(/\/$/, "");
+  const derivedPublicAppBaseUrl = ADMIN_API_BASE_URL.replace(/\/api\/admin$/, "");
+  const publicAppBaseUrl = explicitPublicAppBaseUrl || derivedPublicAppBaseUrl;
+
+  if (normalized.startsWith("/")) {
+    return `${publicAppBaseUrl}${normalized}`;
+  }
+
+  return normalized;
+}
+
 function normalizeBootstrap(payload: unknown): AdminBootstrap {
   if (!isRecord(payload)) {
     throw new Error("Resposta invalida da API administrativa.");
@@ -128,8 +154,7 @@ function normalizeBootstrap(payload: unknown): AdminBootstrap {
       adminEnabled: featureAccess.adminEnabled !== false,
       publicOrderingEnabled: featureAccess.publicOrderingEnabled !== false,
       digitalMenuEnabled: featureAccess.digitalMenuEnabled === true,
-      digitalMenuUrl:
-        typeof featureAccess.digitalMenuUrl === "string" ? featureAccess.digitalMenuUrl : null,
+      digitalMenuUrl: resolveFeatureAccessUrl(featureAccess.digitalMenuUrl),
     },
     products: asArray<MenuProduct>(payload.products),
     offers: asArray<Offer>(payload.offers),

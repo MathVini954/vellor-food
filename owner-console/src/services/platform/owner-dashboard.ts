@@ -72,6 +72,14 @@ function getProductMetadata(productCode: SaaSProductCode) {
   };
 }
 
+function hasProvisioningUrl(productCode: SaaSProductCode) {
+  if (productCode === "BARBER") {
+    return Boolean(process.env.BARBER_PROVISIONING_URL?.trim());
+  }
+
+  return Boolean(process.env.FOOD_PROVISIONING_URL?.trim());
+}
+
 async function ensureProduct(tx: Prisma.TransactionClient, productCode: SaaSProductCode) {
   const metadata = getProductMetadata(productCode);
 
@@ -363,6 +371,16 @@ export async function updateManagedCompanyContract(input: {
     where: { id: input.companyId },
     select: {
       id: true,
+      platformUsers: {
+        where: {
+          role: PlatformUserRole.COMPANY_ADMIN,
+        },
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
+        select: {
+          email: true,
+        },
+      },
       productAccesses: {
         where: {
           product: {
@@ -450,27 +468,30 @@ export async function updateManagedCompanyContract(input: {
     }
   });
 
-  if (productCode === "FOOD" && input.status === "ACTIVE" && company.restaurants.length === 0) {
-    const companyAdmin = await prisma.platformUser.findFirst({
-      where: {
-        companyId: company.id,
-        role: PlatformUserRole.COMPANY_ADMIN,
-      },
-      select: {
-        email: true,
-      },
-    });
+  const shouldSynchronizeFoodTenant =
+    productCode === "FOOD" &&
+    hasProvisioningUrl(productCode) &&
+    (company.restaurants.length > 0 || input.status === "ACTIVE");
 
-    await runProvisioningJob({
-      companyId: company.id,
-      productCode,
-      requestedByEmail: companyAdmin?.email ?? null,
-      featureAccess: {
-        adminEnabled,
-        publicOrderingEnabled,
-        digitalMenuEnabled,
-      },
-    });
+  if (shouldSynchronizeFoodTenant) {
+    try {
+      await runProvisioningJob({
+        companyId: company.id,
+        productCode,
+        requestedByEmail: company.platformUsers[0]?.email ?? null,
+        featureAccess: {
+          adminEnabled,
+          publicOrderingEnabled,
+          digitalMenuEnabled,
+        },
+      });
+    } catch (error) {
+      throw new Error(
+        `Contrato salvo, mas a sincronizacao do tenant FOOD falhou: ${
+          error instanceof Error ? error.message : "erro desconhecido"
+        }`,
+      );
+    }
   }
 }
 
