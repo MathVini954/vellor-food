@@ -57,6 +57,87 @@ export type CompleteInitialSetupPayload = {
   password: string;
 };
 
+const EMPTY_SETTINGS: RestaurantSettings = {
+  restaurant: {
+    name: "",
+    logo: "",
+    whatsapp: "",
+    address: "",
+    city: "",
+    state: "",
+  },
+  operation: {
+    workingHours: "",
+    minimumOrder: "R$ 0,00",
+    deliveryFee: "R$ 0,00",
+    freeDeliveryRadiusKm: "0,0",
+    deliveryActive: false,
+    pickupActive: false,
+  },
+  payment: {
+    cash: false,
+    pix: false,
+    cardOnDelivery: false,
+  },
+  appearance: {
+    primaryColor: "#0f172a",
+    secondaryColor: "#f97316",
+    banner: "",
+    welcomeMessage: "",
+  },
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function normalizeBootstrap(payload: unknown): AdminBootstrap {
+  if (!isRecord(payload)) {
+    throw new Error("Resposta invalida da API administrativa.");
+  }
+
+  const session = isRecord(payload.session) ? payload.session : null;
+
+  if (!session || typeof session.restaurantSlug !== "string" || !session.restaurantSlug) {
+    throw new Error("Resposta invalida da API administrativa.");
+  }
+
+  const featureAccess = isRecord(payload.featureAccess) ? payload.featureAccess : {};
+
+  return {
+    session: {
+      restaurantSlug: session.restaurantSlug,
+      restaurantName:
+        typeof session.restaurantName === "string" ? session.restaurantName : "Restaurante",
+      userName: typeof session.userName === "string" ? session.userName : "Gerente",
+      userEmail: typeof session.userEmail === "string" ? session.userEmail : "",
+      platformName:
+        typeof session.platformName === "string" ? session.platformName : "MesaPilot Gestao",
+    },
+    metrics: asArray<Metric>(payload.metrics),
+    categories: asArray<CategoryOption>(payload.categories),
+    orders: asArray<Order>(payload.orders),
+    tableOrders: asArray<Order>(payload.tableOrders),
+    diningTables: asArray<DiningTable>(payload.diningTables),
+    tableSessions: asArray<TableSession>(payload.tableSessions),
+    featureAccess: {
+      adminEnabled: featureAccess.adminEnabled !== false,
+      publicOrderingEnabled: featureAccess.publicOrderingEnabled !== false,
+      digitalMenuEnabled: featureAccess.digitalMenuEnabled === true,
+      digitalMenuUrl:
+        typeof featureAccess.digitalMenuUrl === "string" ? featureAccess.digitalMenuUrl : null,
+    },
+    products: asArray<MenuProduct>(payload.products),
+    offers: asArray<Offer>(payload.offers),
+    customers: asArray<Customer>(payload.customers),
+    settings: isRecord(payload.settings) ? (payload.settings as RestaurantSettings) : EMPTY_SETTINGS,
+  };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${ADMIN_API_BASE_URL}${path}`, {
     ...init,
@@ -130,7 +211,8 @@ export async function logoutAdmin() {
 }
 
 export async function getAdminBootstrap(slug: string) {
-  return request<AdminBootstrap>(`/restaurants/${slug}/bootstrap`);
+  const payload = await request<unknown>(`/restaurants/${slug}/bootstrap`);
+  return normalizeBootstrap(payload);
 }
 
 export async function updateAdminOrderStatus(
