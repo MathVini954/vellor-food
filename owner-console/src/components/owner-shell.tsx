@@ -43,8 +43,8 @@ export function OwnerShell({
       }}
     >
       <div className="grid min-h-screen w-full lg:grid-cols-[260px_minmax(0,1fr)]">
-        <aside className="border-r border-white/8 bg-black/30 px-5 py-6 backdrop-blur-2xl">
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+        <aside className="border-b border-white/8 bg-black/30 px-4 py-4 backdrop-blur-2xl lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)] lg:rounded-[28px]">
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
               <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
@@ -70,7 +70,7 @@ export function OwnerShell({
             </p>
           </div>
 
-          <nav className="mt-6 space-y-2">
+          <nav className="mt-4 grid grid-cols-2 gap-2 lg:mt-6 lg:block lg:space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeItem === item.key || (item.key === "companies" && activeItem === "company");
@@ -92,7 +92,7 @@ export function OwnerShell({
             })}
           </nav>
 
-          <div className="mt-6 rounded-[24px] border border-white/8 bg-white/[0.03] p-4">
+          <div className="mt-4 rounded-[20px] border border-white/8 bg-white/[0.03] p-4 lg:mt-6 lg:rounded-[24px]">
             <p className={`${geistMono.className} text-[11px] uppercase tracking-[0.22em] text-zinc-500`}>
               stack
             </p>
@@ -103,7 +103,7 @@ export function OwnerShell({
             </div>
           </div>
 
-          <form action={logoutOwnerAction} className="mt-6">
+          <form action={logoutOwnerAction} className="mt-4 lg:mt-6">
             <button
               className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-zinc-300 transition hover:bg-white/[0.06] hover:text-white"
               type="submit"
@@ -114,8 +114,8 @@ export function OwnerShell({
           </form>
         </aside>
 
-        <section className="px-5 py-6 lg:px-10">
-          <header className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.26)] backdrop-blur-2xl">
+        <section className="px-0 py-0 lg:px-10 lg:py-6">
+          <header className="border-b border-white/10 bg-white/[0.04] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.26)] backdrop-blur-2xl sm:rounded-[28px] sm:border sm:p-5 lg:rounded-[32px] lg:p-6">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
                 <p className={`${geistMono.className} text-[11px] uppercase tracking-[0.28em] text-zinc-500`}>
@@ -131,7 +131,7 @@ export function OwnerShell({
             </div>
           </header>
 
-          <div className="mt-6">{children}</div>
+          <div className="mt-4 px-4 pb-4 sm:mt-6 sm:px-0 sm:pb-0">{children}</div>
         </section>
       </div>
     </main>
