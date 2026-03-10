@@ -38,6 +38,9 @@ export async function createCompanyAction(formData: FormData) {
     monthlyPrice: String(formData.get("monthlyPrice") ?? ""),
     notes: String(formData.get("notes") ?? ""),
     status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
+    adminEnabled: formData.get("adminEnabled") === "on",
+    publicOrderingEnabled: formData.get("publicOrderingEnabled") === "on",
+    digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
   });
 
   redirectBack(legacyToken);
@@ -52,6 +55,9 @@ export async function updateCompanyStatusAction(formData: FormData) {
     status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
     endsAt: String(formData.get("endsAt") ?? ""),
     notes: String(formData.get("notes") ?? ""),
+    adminEnabled: formData.get("adminEnabled") === "on",
+    publicOrderingEnabled: formData.get("publicOrderingEnabled") === "on",
+    digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
   });
 
   redirectBack(legacyToken);

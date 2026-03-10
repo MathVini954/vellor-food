@@ -17,26 +17,32 @@ const shortcutCards: Array<{
   eyebrow: string;
 }> = [
   {
-    title: "Pedidos",
-    description: "Fila de novos pedidos, preparo, envio e conclusão com atualização operacional direta.",
-    route: "Pedidos",
-    eyebrow: "Operação",
+    title: "Pedidos online",
+    description: "Fila separada de delivery e retirada com atualizacao operacional direta.",
+    route: "PedidosOnline",
+    eyebrow: "Operacao",
   },
   {
-    title: "Cardápio",
-    description: "Catálogo, categorias, personalizações e disponibilidade refletidas no app mobile.",
+    title: "Mesas",
+    description: "Controle de ocupacao, comanda presencial, QR fixo e fechamento de mesa.",
+    route: "Mesas",
+    eyebrow: "Salao",
+  },
+  {
+    title: "Cardapio",
+    description: "Catalogo, categorias, personalizacoes e disponibilidade refletidas no app mobile.",
     route: "Cardapio",
-    eyebrow: "Conteúdo",
+    eyebrow: "Conteudo",
   },
   {
     title: "Ofertas",
-    description: "Campanhas promocionais, prato do dia e destaque visual consumido pelo app público.",
+    description: "Campanhas promocionais, prato do dia e destaque visual consumido pelo app publico.",
     route: "Ofertas",
     eyebrow: "Comercial",
   },
   {
     title: "Clientes",
-    description: "Base viva de clientes e histórico real de pedidos feitos pelo canal mobile.",
+    description: "Base viva de clientes e historico real de pedidos feitos pelo canal mobile.",
     route: "Clientes",
     eyebrow: "Relacionamento",
   },
@@ -57,8 +63,8 @@ export function HomeDashboardPage({
       activeSection="Dashboard"
       restaurantName={restaurantName}
       userName={userName}
-      pageTitle="Central de gestão"
-      pageSubtitle="Resumo executivo do restaurante, com acesso rápido para operação, catálogo e relacionamento."
+      pageTitle="Central de gestao"
+      pageSubtitle="Resumo executivo do restaurante, com acesso rapido para operacao, salao, catalogo e relacionamento."
       onLogout={onLogout}
       onNavigate={onNavigate}
       aside={
@@ -68,10 +74,10 @@ export function HomeDashboardPage({
               <h3 className="text-sm font-semibold text-slate-900">Fila recente</h3>
               <button
                 type="button"
-                onClick={() => onNavigate("Pedidos")}
+                onClick={() => onNavigate("PedidosOnline")}
                 className="text-xs font-semibold text-sky-600"
               >
-                Abrir pedidos
+                Abrir pedidos online
               </button>
             </div>
             <div className="mt-4 space-y-3">
@@ -95,16 +101,16 @@ export function HomeDashboardPage({
           <section className="rounded-[22px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
             <h3 className="text-sm font-semibold text-slate-900">Sincronia entre apps</h3>
             <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-500">
-              <li>Cardápio e ofertas publicados aqui abastecem o app mobile.</li>
-              <li>Pedidos feitos pelo cliente caem no painel e alimentam clientes automaticamente.</li>
-              <li>Configurações de entrega e WhatsApp são reaproveitadas no checkout público.</li>
+              <li>Cardapio e ofertas publicados aqui abastecem o app mobile.</li>
+              <li>Pedidos online entram separados das comandas de mesa.</li>
+              <li>O QR fixo do cardapio digital reaproveita o mesmo cardapio do app publico.</li>
             </ul>
           </section>
         </div>
       }
     >
       <section className="panel p-5 lg:p-6">
-        <div className="grid gap-4 xl:grid-cols-4">
+        <div className="grid gap-4 xl:grid-cols-5">
           {metrics.map((metric) => (
             <article key={metric.label} className="rounded-[22px] border border-slate-200 bg-[#fcfcfd] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{metric.label}</p>
@@ -120,9 +126,9 @@ export function HomeDashboardPage({
       <section className="panel mt-5 p-5 lg:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-slate-950">Módulos principais</h2>
+            <h2 className="text-xl font-semibold text-slate-950">Modulos principais</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Acesso direto às áreas que movimentam o restaurante no dia a dia.
+              Acesso direto as areas que movimentam o restaurante no dia a dia.
             </p>
           </div>
         </div>

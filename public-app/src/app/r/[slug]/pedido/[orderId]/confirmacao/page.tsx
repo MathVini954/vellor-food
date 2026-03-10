@@ -37,6 +37,7 @@ export default async function OrderConfirmationPage({
 
   const whatsappUrl = buildWhatsAppUrl(order);
   const whatsappWebUrl = buildWhatsAppUrl(order, "web");
+  const isDineInOrder = order.orderType === "DINE_IN";
 
   return (
     <PublicPageShell slug={slug}>
@@ -54,12 +55,16 @@ export default async function OrderConfirmationPage({
               <p className="mt-2 break-all text-[28px] font-bold leading-tight text-white sm:text-[30px]">
                 {order.id}
               </p>
+              {order.tableLabel ? (
+                <p className="mt-3 text-sm font-medium text-white/72">{order.tableLabel}</p>
+              ) : null}
             </div>
           </div>
 
           <p className="mt-6 max-w-[28rem] text-sm leading-7 text-white/75">
-            Seu pedido ja foi salvo no sistema do restaurante. Agora so falta confirmar o envio no
-            WhatsApp.
+            {isDineInOrder
+              ? "Seu pedido ja entrou na comanda da mesa e foi enviado para o gerencial do restaurante."
+              : "Seu pedido ja foi salvo no sistema do restaurante. Agora so falta confirmar o envio no WhatsApp."}
           </p>
         </section>
 
@@ -106,27 +111,36 @@ export default async function OrderConfirmationPage({
           </div>
         </section>
 
-        <OpenWhatsAppButton
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-[22px] bg-emerald-600 px-5 py-4 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(5,150,105,0.24)]"
-          appUrl={whatsappUrl}
-          webUrl={whatsappWebUrl}
-        >
-          <MessageCircleMore size={18} />
-          Abrir WhatsApp para confirmar pedido
-        </OpenWhatsAppButton>
+        {isDineInOrder ? (
+          <Link
+            href={`/r/${slug}/meus-pedidos`}
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-[22px] bg-[#111827] px-5 py-4 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]"
+          >
+            Ver comanda da mesa
+          </Link>
+        ) : (
+          <OpenWhatsAppButton
+            className="mt-5 flex w-full items-center justify-center gap-2 rounded-[22px] bg-emerald-600 px-5 py-4 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(5,150,105,0.24)]"
+            appUrl={whatsappUrl}
+            webUrl={whatsappWebUrl}
+          >
+            <MessageCircleMore size={18} />
+            Abrir WhatsApp para confirmar pedido
+          </OpenWhatsAppButton>
+        )}
 
         <Link
-          href={`/r/${slug}/meus-pedidos`}
+          href={isDineInOrder ? `/r/${slug}` : `/r/${slug}/meus-pedidos`}
           className="mt-4 flex w-full items-center justify-center rounded-[22px] bg-[#111827] px-5 py-4 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]"
         >
-          Acompanhar meus pedidos
+          {isDineInOrder ? "Adicionar mais itens" : "Acompanhar meus pedidos"}
         </Link>
 
         <Link
           href={`/r/${slug}`}
           className="mt-3 flex w-full items-center justify-center rounded-[22px] border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700"
         >
-          Fazer novo pedido
+          {isDineInOrder ? "Voltar ao cardapio" : "Fazer novo pedido"}
         </Link>
       </div>
     </PublicPageShell>

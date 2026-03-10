@@ -233,11 +233,11 @@ export function OrdersManagementPage({
 
   return (
     <AdminShell
-      activeSection="Pedidos"
+      activeSection="PedidosOnline"
       restaurantName={restaurantName}
       userName={userName}
-      pageTitle="Gerenciamento de pedidos"
-      pageSubtitle="Monitore a fila em tempo real, avance status e filtre historico por periodo."
+      pageTitle="Pedidos online"
+      pageSubtitle="Monitore delivery e retirada em tempo real, avance status e filtre historico por periodo."
       onLogout={onLogout}
       onNavigate={onNavigate}
       aside={<OrderDetailsPanel order={selectedOrder} />}

@@ -113,6 +113,11 @@ export type ManagedCompanyRecord = {
     orders: number;
     customers: number;
   };
+  featureAccess: {
+    adminEnabled: boolean;
+    publicOrderingEnabled: boolean;
+    digitalMenuEnabled: boolean;
+  };
 };
 
 export async function listManagedCompanies() {
@@ -159,6 +164,9 @@ export async function listManagedCompanies() {
           id: true,
           adminPasswordTemporary: true,
           onboardingCompleted: true,
+          adminModuleEnabled: true,
+          publicOrderingEnabled: true,
+          digitalMenuEnabled: true,
           city: true,
           state: true,
           _count: {
@@ -208,6 +216,11 @@ export async function listManagedCompanies() {
         orders: foodTenant?._count.orders ?? 0,
         customers: foodTenant?._count.customers ?? 0,
       },
+      featureAccess: {
+        adminEnabled: foodTenant?.adminModuleEnabled ?? true,
+        publicOrderingEnabled: foodTenant?.publicOrderingEnabled ?? true,
+        digitalMenuEnabled: foodTenant?.digitalMenuEnabled ?? false,
+      },
     } satisfies ManagedCompanyRecord;
   });
 }
@@ -224,6 +237,9 @@ export async function createManagedCompany(input: {
   notes?: string;
   status?: RestaurantContractStatus;
   productCode?: SaaSProductCode;
+  adminEnabled?: boolean;
+  publicOrderingEnabled?: boolean;
+  digitalMenuEnabled?: boolean;
 }) {
   const companyName = input.companyName.trim();
   const primaryContactPhone = input.primaryContactPhone.replace(/\D/g, "");
@@ -235,6 +251,9 @@ export async function createManagedCompany(input: {
   const notes = input.notes?.trim() ?? "";
   const status = input.status ?? "ACTIVE";
   const productCode = input.productCode ?? "FOOD";
+  const adminEnabled = input.adminEnabled ?? true;
+  const publicOrderingEnabled = input.publicOrderingEnabled ?? true;
+  const digitalMenuEnabled = input.digitalMenuEnabled ?? false;
 
   if (!companyName || !primaryContactPhone || !adminName || !email || !temporaryPassword) {
     throw new Error("Preencha os campos obrigatorios da empresa.");
@@ -309,6 +328,11 @@ export async function createManagedCompany(input: {
     companyId: result.companyId,
     productCode: result.productCode,
     requestedByEmail: result.requestedByEmail,
+    featureAccess: {
+      adminEnabled,
+      publicOrderingEnabled,
+      digitalMenuEnabled,
+    },
   });
 
   return result;
@@ -320,10 +344,16 @@ export async function updateManagedCompanyContract(input: {
   endsAt?: string;
   notes?: string;
   productCode?: SaaSProductCode;
+  adminEnabled?: boolean;
+  publicOrderingEnabled?: boolean;
+  digitalMenuEnabled?: boolean;
 }) {
   const endsAt = input.endsAt?.trim() ?? "";
   const notes = input.notes?.trim() ?? "";
   const productCode = input.productCode ?? "FOOD";
+  const adminEnabled = input.adminEnabled ?? true;
+  const publicOrderingEnabled = input.publicOrderingEnabled ?? true;
+  const digitalMenuEnabled = input.digitalMenuEnabled ?? false;
 
   const company = await prisma.company.findUnique({
     where: { id: input.companyId },
@@ -381,6 +411,15 @@ export async function updateManagedCompanyContract(input: {
     const foodTenant = company.restaurants[0];
 
     if (productCode === "FOOD" && foodTenant) {
+      await tx.restaurant.update({
+        where: { id: foodTenant.id },
+        data: {
+          adminModuleEnabled: adminEnabled,
+          publicOrderingEnabled,
+          digitalMenuEnabled,
+        },
+      });
+
       await tx.restaurantContract.upsert({
         where: { restaurantId: foodTenant.id },
         update: {
@@ -416,6 +455,11 @@ export async function updateManagedCompanyContract(input: {
       companyId: company.id,
       productCode,
       requestedByEmail: companyAdmin?.email ?? null,
+      featureAccess: {
+        adminEnabled,
+        publicOrderingEnabled,
+        digitalMenuEnabled,
+      },
     });
   }
 }

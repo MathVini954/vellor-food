@@ -22,7 +22,18 @@ export const dashboardMetrics: Metric[] = [
   { label: "Faturamento do dia", value: "R$ 4.860", change: "+18% vs ontem", trend: "up" },
 ];
 
-export const orderManagementData: Order[] = [
+const orderManagementSeed: Array<
+  Omit<
+    Order,
+    | "channel"
+    | "channelLabel"
+    | "orderTypeLabel"
+    | "paymentMethodLabel"
+    | "notes"
+    | "tableLabel"
+    | "tableSessionId"
+  >
+> = [
   {
     id: "#1058",
     customer: "Ana Paula",
@@ -108,6 +119,17 @@ export const orderManagementData: Order[] = [
     address: "Travessa Aurora, 17",
   },
 ];
+
+export const orderManagementData: Order[] = orderManagementSeed.map((order) => ({
+  ...order,
+  channel: "ONLINE" as const,
+  channelLabel: "Online",
+  orderTypeLabel: "Entrega",
+  paymentMethodLabel: "Pix",
+  notes: null,
+  tableLabel: null,
+  tableSessionId: null,
+}));
 
 export const menuProductsData: MenuProduct[] = [
   {

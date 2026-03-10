@@ -74,38 +74,48 @@ function DefaultAside({
   const sections: Record<AdminSection, { title: string; text: string }[]> = {
     Dashboard: [
       {
-        title: "Visão central",
-        text: "Acompanhe os indicadores gerais e abra rapidamente o módulo operacional que precisa da sua atenção.",
+        title: "Visao central",
+        text: "Acompanhe indicadores gerais e abra rapidamente o modulo operacional que precisa da sua atencao.",
       },
       {
         title: "Ritmo do dia",
-        text: "O layout foi reorganizado para deixar métricas, filas e atalhos críticos sempre visíveis.",
+        text: "O layout deixa metricas, filas e atalhos criticos sempre visiveis.",
       },
     ],
-    Pedidos: [
+    PedidosOnline: [
       {
-        title: "Fila operacional",
-        text: "Aceite, mova e conclua pedidos sem trocar de contexto. O painel lateral mantém o pedido ativo em foco.",
+        title: "Fila online",
+        text: "Aceite, mova e conclua pedidos de delivery e retirada sem misturar com as comandas do salao.",
       },
       {
-        title: "Sincronização",
-        text: "Os pedidos do mobile entram direto aqui e seguem para a operação em tempo real.",
+        title: "Sincronizacao",
+        text: "Os pedidos do app publico entram direto aqui e seguem para a operacao em tempo real.",
+      },
+    ],
+    Mesas: [
+      {
+        title: "Salao presencial",
+        text: "Controle ocupacao, comandas abertas, QR fixo e consolidacao de pedidos presenciais por mesa.",
+      },
+      {
+        title: "Comanda viva",
+        text: "A mesa continua acumulando novos pedidos ate o fechamento manual no gerencial.",
       },
     ],
     Cardapio: [
       {
-        title: "Catálogo vivo",
-        text: "Produtos, categorias e personalizações ficam organizados para alimentar o mobile sem retrabalho.",
+        title: "Catalogo vivo",
+        text: "Produtos, categorias e personalizacoes ficam organizados para alimentar o mobile sem retrabalho.",
       },
       {
-        title: "Publicação",
-        text: "Alterações salvas no gerencial passam a refletir o cardápio público do restaurante.",
+        title: "Publicacao",
+        text: "Alteracoes salvas no gerencial passam a refletir o cardapio publico do restaurante.",
       },
     ],
     Ofertas: [
       {
         title: "Campanhas ativas",
-        text: "Estruture prato do dia, descontos por categoria e promoções específicas com vínculo real aos itens.",
+        text: "Estruture prato do dia, descontos por categoria e promocoes especificas com vinculo real aos itens.",
       },
       {
         title: "Destaque no mobile",
@@ -115,21 +125,21 @@ function DefaultAside({
     Clientes: [
       {
         title: "Base unificada",
-        text: "Todo cliente que compra pelo mobile entra automaticamente aqui para histórico e relacionamento.",
+        text: "Todo cliente que compra pelo mobile entra automaticamente aqui para historico e relacionamento.",
       },
       {
-        title: "Identificação",
-        text: "Nome, telefone e localização passam a reaproveitar dados já salvos a cada novo pedido.",
+        title: "Identificacao",
+        text: "Nome, telefone e localizacao passam a reaproveitar dados ja salvos a cada novo pedido.",
       },
     ],
     Configuracoes: [
       {
-        title: "Loja e operação",
-        text: "Centralize identidade, pagamento, bairros atendidos e parâmetros que regulam o checkout do mobile.",
+        title: "Loja e operacao",
+        text: "Centralize identidade, pagamento, bairros atendidos e parametros que regulam o checkout do mobile.",
       },
       {
-        title: "Experiência conectada",
-        text: "O que for salvo aqui orienta taxa de entrega, WhatsApp, visual e comportamento do app público.",
+        title: "Experiencia conectada",
+        text: "O que for salvo aqui orienta taxa de entrega, WhatsApp, visual e comportamento do app publico.",
       },
     ],
   };
@@ -140,7 +150,7 @@ function DefaultAside({
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">Restaurante</p>
         <h3 className="mt-3 text-xl font-semibold text-slate-900">{restaurantName}</h3>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          Painel central alinhado com o app público e com os dados reais do restaurante.
+          Painel central alinhado com o app publico e com os dados reais do restaurante.
         </p>
       </section>
 

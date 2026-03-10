@@ -7,9 +7,15 @@ import {
   findCustomizationOption,
   parseProductCustomizationConfig,
 } from "@/lib/product-customization";
-import { customerCookieName, guestCookieName } from "@/lib/session";
+import {
+  customerCookieName,
+  dineInAccessCookieName,
+  guestCookieName,
+  tableSessionCookieName,
+} from "@/lib/session";
 import { orderPayloadSchema } from "@/lib/validation";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { findOrCreateOpenTableSession } from "@/services/food/dining-room";
 import { getRestaurantBySlugOrThrow } from "@/services/public/restaurants";
 
 const paymentMethodLabelMap: Record<PaymentMethod, string> = {
@@ -19,6 +25,17 @@ const paymentMethodLabelMap: Record<PaymentMethod, string> = {
   PAY_ON_PICKUP: "Pagar na retirada",
 };
 const BLOCKED_CUSTOMER_ERROR = "Este cliente esta bloqueado para novos pedidos neste restaurante.";
+
+function getPaymentMethodLabel(
+  paymentMethod: PaymentMethod,
+  orderType: "DELIVERY" | "PICKUP" | "DINE_IN",
+) {
+  if (orderType === "DINE_IN" && paymentMethod === "PAY_ON_PICKUP") {
+    return "Pagamento no caixa";
+  }
+
+  return paymentMethodLabelMap[paymentMethod];
+}
 
 function buildCustomizationSummary(customizations: string[] | undefined) {
   if (!customizations?.length) {
@@ -48,6 +65,29 @@ export async function POST(
     if (!restaurant.isOpen) {
       return NextResponse.json(
         { error: "O restaurante esta fechado no momento." },
+        { status: 400 },
+      );
+    }
+
+    const isDineInOrder = parsed.data.orderType === "DINE_IN";
+
+    if (!isDineInOrder && !restaurant.publicOrderingEnabled) {
+      return NextResponse.json(
+        { error: "O app publico deste restaurante esta desativado." },
+        { status: 403 },
+      );
+    }
+
+    if (isDineInOrder && !restaurant.digitalMenuEnabled) {
+      return NextResponse.json(
+        { error: "O cardapio digital deste restaurante esta desativado." },
+        { status: 403 },
+      );
+    }
+
+    if (!isDineInOrder && !restaurant.whatsapp) {
+      return NextResponse.json(
+        { error: "O restaurante ainda nao configurou o WhatsApp para pedidos online." },
         { status: 400 },
       );
     }
@@ -90,9 +130,20 @@ export async function POST(
       );
     }
 
-    if (parsed.data.paymentMethod === "PAY_ON_PICKUP" && !restaurant.pickupActive) {
+    if (
+      parsed.data.paymentMethod === "PAY_ON_PICKUP" &&
+      !restaurant.pickupActive &&
+      !isDineInOrder
+    ) {
       return NextResponse.json(
         { error: "Pagamento na retirada indisponivel sem retirada ativa." },
+        { status: 400 },
+      );
+    }
+
+    if (isDineInOrder && parsed.data.paymentMethod !== "PAY_ON_PICKUP") {
+      return NextResponse.json(
+        { error: "Pedidos de mesa usam pagamento separado no caixa." },
         { status: 400 },
       );
     }
@@ -164,7 +215,7 @@ export async function POST(
 
     const subtotal = itemPricing.reduce((total, item) => total + item.totalPrice, 0);
 
-    if (subtotal < restaurant.minimumOrderValue) {
+    if (!isDineInOrder && subtotal < restaurant.minimumOrderValue) {
       return NextResponse.json(
         {
           error: `O pedido minimo e ${restaurant.minimumOrderValue.toFixed(2)}.`,
@@ -217,6 +268,15 @@ export async function POST(
       parsed.data.orderType === "DELIVERY" ? deliveryQuote?.deliveryFee ?? restaurant.deliveryFee : 0;
 
     const total = subtotal + deliveryFee;
+    const requestedTableId = parsed.data.tableId?.trim() || null;
+    const requestedTableIdentifier = parsed.data.tableIdentifier?.trim() || null;
+
+    if (isDineInOrder && !requestedTableId && !requestedTableIdentifier) {
+      return NextResponse.json(
+        { error: "Selecione a mesa para abrir ou continuar a comanda." },
+        { status: 400 },
+      );
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const existingCustomer = await tx.customer.findUnique({
@@ -251,10 +311,56 @@ export async function POST(
             },
           });
 
+      let tableSession:
+        | {
+            id: string;
+            diningTable: {
+              label: string;
+            };
+          }
+        | null = null;
+
+      if (isDineInOrder) {
+        const diningTable = await tx.diningTable.findFirst({
+          where: {
+            restaurantId: restaurant.id,
+            isActive: true,
+            OR: [
+              ...(requestedTableId ? [{ id: requestedTableId }] : []),
+              ...(requestedTableIdentifier
+                ? [{ identifier: { equals: requestedTableIdentifier, mode: "insensitive" as const } }]
+                : []),
+            ],
+          },
+          select: {
+            id: true,
+            label: true,
+          },
+        });
+
+        if (!diningTable) {
+          throw new Error("Mesa nao encontrada ou indisponivel.");
+        }
+
+        const openedTableSession = await findOrCreateOpenTableSession(tx, {
+          restaurantId: restaurant.id,
+          tableId: diningTable.id,
+          requestedSessionId: parsed.data.tableSessionId ?? null,
+        });
+
+        tableSession = {
+          id: openedTableSession.id,
+          diningTable: {
+            label: diningTable.label,
+          },
+        };
+      }
+
       const order = await tx.order.create({
         data: {
           restaurantId: restaurant.id,
           customerId: customer.id,
+          tableSessionId: tableSession?.id ?? null,
           customerName: parsed.data.customerName,
           customerPhone: normalizedPhone,
           customerAddress: parsed.data.customerAddress,
@@ -285,7 +391,7 @@ export async function POST(
         },
       });
 
-      return { customer, order };
+      return { customer, order, tableSession };
     });
 
     const confirmationOrder = {
@@ -299,8 +405,9 @@ export async function POST(
       total,
       orderType: result.order.orderType,
       paymentMethod: result.order.paymentMethod,
-      paymentMethodLabel: paymentMethodLabelMap[result.order.paymentMethod],
+      paymentMethodLabel: getPaymentMethodLabel(result.order.paymentMethod, result.order.orderType),
       notes: result.order.notes,
+      tableLabel: result.tableSession?.diningTable.label ?? null,
       restaurant: {
         name: restaurant.name,
         whatsapp: restaurant.whatsapp,
@@ -316,8 +423,8 @@ export async function POST(
 
     const response = NextResponse.json({
       orderId: result.order.id,
-      whatsappUrl: buildWhatsAppUrl(confirmationOrder),
-      whatsappWebUrl: buildWhatsAppUrl(confirmationOrder, "web"),
+      whatsappUrl: isDineInOrder ? null : buildWhatsAppUrl(confirmationOrder),
+      whatsappWebUrl: isDineInOrder ? null : buildWhatsAppUrl(confirmationOrder, "web"),
       customer: {
         id: result.customer.id,
         name: result.customer.name,
@@ -325,6 +432,12 @@ export async function POST(
         address: result.customer.address,
         neighborhood: result.customer.neighborhood,
       },
+      tableSession: result.tableSession
+        ? {
+            id: result.tableSession.id,
+            tableLabel: result.tableSession.diningTable.label,
+          }
+        : null,
     });
 
     response.cookies.set(customerCookieName(slug), result.customer.id, {
@@ -335,6 +448,23 @@ export async function POST(
       maxAge: 60 * 60 * 24 * 30,
     });
     response.cookies.delete(guestCookieName(slug));
+
+    if (result.tableSession) {
+      response.cookies.set(tableSessionCookieName(slug), result.tableSession.id, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60 * 12,
+      });
+      response.cookies.set(dineInAccessCookieName(slug), "1", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+        maxAge: 60 * 60 * 12,
+      });
+    }
 
     return response;
   } catch (error) {
@@ -348,6 +478,15 @@ export async function POST(
     }
 
     if (error instanceof Error && error.message.startsWith("Selecione uma opcao obrigatoria")) {
+      return NextResponse.json(
+        {
+          error: error.message,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (error instanceof Error && error.message === "Mesa nao encontrada ou indisponivel.") {
       return NextResponse.json(
         {
           error: error.message,

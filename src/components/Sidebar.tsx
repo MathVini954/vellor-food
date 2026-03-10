@@ -8,7 +8,8 @@ const navigationGroups: Array<{
     label: "Operacao",
     items: [
       { section: "Dashboard", title: "Dashboard", icon: "dashboard" },
-      { section: "Pedidos", title: "Pedidos", icon: "orders" },
+      { section: "PedidosOnline", title: "Pedidos online", icon: "orders" },
+      { section: "Mesas", title: "Mesas", icon: "tables" },
       { section: "Cardapio", title: "Cardápio", icon: "menu" },
     ],
   },
@@ -150,6 +151,12 @@ function SidebarGlyph({ icon }: { icon: string }) {
       return (
         <svg viewBox="0 0 24 24" fill="none" className={common} stroke="currentColor" strokeWidth="1.8">
           <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm7 3.5-.9-.5.1-1a1 1 0 0 0-.6-1l-1-.4-.3-1a1 1 0 0 0-.9-.6l-1 .1-.6-.9a1 1 0 0 0-1-.4l-1 .3-1-.3a1 1 0 0 0-1 .4l-.6.9-1-.1a1 1 0 0 0-.9.6l-.3 1-1 .4a1 1 0 0 0-.6 1l.1 1-.9.5a1 1 0 0 0-.4.9l.3 1 1 .4.3 1a1 1 0 0 0 .9.6l1-.1.6.9a1 1 0 0 0 1 .4l1-.3 1 .3a1 1 0 0 0 1-.4l.6-.9 1 .1a1 1 0 0 0 .9-.6l.3-1 1-.4.3-1a1 1 0 0 0-.4-.9Z" />
+        </svg>
+      );
+    case "tables":
+      return (
+        <svg viewBox="0 0 24 24" fill="none" className={common} stroke="currentColor" strokeWidth="1.8">
+          <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v6A2.5 2.5 0 0 1 17.5 16h-11A2.5 2.5 0 0 1 4 13.5v-6ZM8 16v3M16 16v3M4 10h16" strokeLinecap="round" />
         </svg>
       );
     case "brand":

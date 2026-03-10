@@ -78,9 +78,13 @@ export function CheckoutPageClient({
     clearCart,
     customer,
     setCustomer,
+    tableSession,
+    setTableSession,
+    experienceMode,
     incrementCartItem,
     decrementCartItem,
   } = useRestaurantStore();
+  const isDineInExperience = experienceMode === "DINE_IN";
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
@@ -98,8 +102,11 @@ export function CheckoutPageClient({
     customerPhone: customer?.phone ?? initialCustomer?.phone ?? "",
     customerAddress: customer?.address ?? initialCustomer?.address ?? "",
     customerNeighborhood: customer?.neighborhood ?? initialCustomer?.neighborhood ?? "",
-    orderType: "DELIVERY",
-    paymentMethod: "PIX",
+    tableId: tableSession?.tableId ?? restaurant.diningTables[0]?.id ?? "",
+    tableIdentifier:
+      tableSession?.tableIdentifier ?? restaurant.diningTables[0]?.identifier ?? "",
+    orderType: isDineInExperience ? "DINE_IN" : "DELIVERY",
+    paymentMethod: isDineInExperience ? "PAY_ON_PICKUP" : "PIX",
     notes: "",
   });
 
@@ -132,6 +139,25 @@ export function CheckoutPageClient({
       customerAddress: nextAddress,
     }));
   }, [street, streetNumber, zipCode]);
+
+  useEffect(() => {
+    if (!isDineInExperience) {
+      return;
+    }
+
+    const selectedTable = restaurant.diningTables.find((table) => table.id === form.tableId);
+
+    if (!selectedTable) {
+      return;
+    }
+
+    setForm((current) => ({
+      ...current,
+      tableIdentifier: selectedTable.identifier,
+      orderType: "DINE_IN",
+      paymentMethod: "PAY_ON_PICKUP",
+    }));
+  }, [form.tableId, isDineInExperience, restaurant.diningTables]);
 
   useEffect(() => {
     if (form.orderType !== "DELIVERY") {
@@ -196,7 +222,10 @@ export function CheckoutPageClient({
     };
   }, [form.orderType, zipCode]);
 
-  const enabledPaymentOptions = paymentOptions.filter((option) => {
+  const enabledPaymentOptions = (isDineInExperience
+    ? [{ value: "PAY_ON_PICKUP" as PaymentMethod, label: "Pagamento no caixa" }]
+    : paymentOptions
+  ).filter((option) => {
     if (option.value === "CASH") {
       return restaurant.acceptCash;
     }
@@ -207,9 +236,21 @@ export function CheckoutPageClient({
       return restaurant.acceptCardOnDelivery;
     }
     return restaurant.pickupActive;
+    return true;
   });
 
   useEffect(() => {
+    if (isDineInExperience) {
+      if (form.orderType !== "DINE_IN" || form.paymentMethod !== "PAY_ON_PICKUP") {
+        setForm((current) => ({
+          ...current,
+          orderType: "DINE_IN",
+          paymentMethod: "PAY_ON_PICKUP",
+        }));
+      }
+      return;
+    }
+
     if (form.orderType === "DELIVERY" && !restaurant.deliveryActive && restaurant.pickupActive) {
       setForm((current) => ({ ...current, orderType: "PICKUP" }));
     }
@@ -217,7 +258,7 @@ export function CheckoutPageClient({
     if (form.orderType === "PICKUP" && !restaurant.pickupActive && restaurant.deliveryActive) {
       setForm((current) => ({ ...current, orderType: "DELIVERY" }));
     }
-  }, [form.orderType, restaurant.deliveryActive, restaurant.pickupActive]);
+  }, [form.orderType, form.paymentMethod, isDineInExperience, restaurant.deliveryActive, restaurant.pickupActive]);
 
   useEffect(() => {
     if (!enabledPaymentOptions.some((option) => option.value === form.paymentMethod)) {
@@ -293,9 +334,11 @@ export function CheckoutPageClient({
   }, [form.customerAddress, form.customerNeighborhood, form.orderType, slug]);
 
   const deliveryFee =
-    form.orderType === "DELIVERY" ? deliveryQuote?.deliveryFee ?? restaurant.deliveryFee : 0;
+    !isDineInExperience && form.orderType === "DELIVERY"
+      ? deliveryQuote?.deliveryFee ?? restaurant.deliveryFee
+      : 0;
   const total = useMemo(() => subtotal + deliveryFee, [subtotal, deliveryFee]);
-  const minimumOrderReached = subtotal >= restaurant.minimumOrderValue;
+  const minimumOrderReached = isDineInExperience ? true : subtotal >= restaurant.minimumOrderValue;
 
   function prefersWhatsAppWeb() {
     if (typeof navigator === "undefined") {
@@ -334,12 +377,12 @@ export function CheckoutPageClient({
       return;
     }
 
-    if (form.orderType === "DELIVERY" && !restaurant.deliveryActive) {
+    if (!isDineInExperience && form.orderType === "DELIVERY" && !restaurant.deliveryActive) {
       setError("A entrega esta desativada no momento.");
       return;
     }
 
-    if (form.orderType === "PICKUP" && !restaurant.pickupActive) {
+    if (!isDineInExperience && form.orderType === "PICKUP" && !restaurant.pickupActive) {
       setError("A retirada esta desativada no momento.");
       return;
     }
@@ -356,22 +399,29 @@ export function CheckoutPageClient({
       return;
     }
 
-    if (form.orderType === "DELIVERY" && (!form.customerAddress || !form.customerNeighborhood)) {
+    if (!isDineInExperience && form.orderType === "DELIVERY" && (!form.customerAddress || !form.customerNeighborhood)) {
       setError("Informe endereco e bairro para entrega.");
       return;
     }
 
-    if (form.orderType === "DELIVERY" && deliveryQuoteError) {
+    if (!isDineInExperience && form.orderType === "DELIVERY" && deliveryQuoteError) {
       setError(deliveryQuoteError);
       return;
     }
 
-    if (form.orderType === "DELIVERY" && !deliveryQuote) {
+    if (!isDineInExperience && form.orderType === "DELIVERY" && !deliveryQuote) {
       setError("Aguarde o calculo da entrega antes de finalizar.");
       return;
     }
 
-    whatsappWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (isDineInExperience && !form.tableId) {
+      setError("Selecione a mesa para continuar.");
+      return;
+    }
+
+    if (!isDineInExperience) {
+      whatsappWindow = window.open("", "_blank", "noopener,noreferrer");
+    }
     setIsSubmitting(true);
 
     const response = await fetch(`/api/public/restaurants/${slug}/orders`, {
@@ -383,7 +433,10 @@ export function CheckoutPageClient({
         customerAddress: form.customerAddress,
         customerNeighborhood: form.customerNeighborhood,
         orderType: form.orderType,
-        paymentMethod: form.paymentMethod,
+        paymentMethod: isDineInExperience ? "PAY_ON_PICKUP" : form.paymentMethod,
+        tableId: form.tableId || null,
+        tableIdentifier: form.tableIdentifier || null,
+        tableSessionId: tableSession?.id ?? null,
         notes: form.notes,
         items: cart.map((item) => ({
           productId: item.productId,
@@ -404,12 +457,29 @@ export function CheckoutPageClient({
     }
 
     setCustomer(payload.customer);
+    if (payload.tableSession) {
+      setTableSession({
+        id: payload.tableSession.id,
+        tableId: form.tableId,
+        tableLabel: payload.tableSession.tableLabel,
+        tableIdentifier: form.tableIdentifier,
+        openedAt: tableSession?.openedAt ?? new Date().toISOString(),
+        closedAt: null,
+        status: "OPEN",
+        total: tableSession?.total ?? 0,
+        itemCount: tableSession?.itemCount ?? 0,
+        customerCount: tableSession?.customerCount ?? 1,
+        notes: tableSession?.notes ?? null,
+        customerNames: tableSession?.customerNames ?? [form.customerName],
+        orders: tableSession?.orders ?? [],
+      });
+    }
     clearCart();
 
     const whatsappTargetUrl =
       prefersWhatsAppWeb() && payload.whatsappWebUrl ? payload.whatsappWebUrl : payload.whatsappUrl;
 
-    if (whatsappTargetUrl) {
+    if (!isDineInExperience && whatsappTargetUrl) {
       if (whatsappWindow && !whatsappWindow.closed) {
         whatsappWindow.location.href = whatsappTargetUrl;
       } else {
@@ -433,7 +503,9 @@ export function CheckoutPageClient({
           </Link>
           <div>
             <p className="text-sm text-slate-400">{restaurant.name}</p>
-            <h1 className="text-[24px] font-bold text-slate-900">Finalizar pedido</h1>
+            <h1 className="text-[24px] font-bold text-slate-900">
+              {isDineInExperience ? "Enviar para a cozinha" : "Finalizar pedido"}
+            </h1>
           </div>
         </header>
 
@@ -469,7 +541,9 @@ export function CheckoutPageClient({
             </Link>
             <div>
               <p className="text-sm text-slate-400">{restaurant.name}</p>
-              <h1 className="text-[24px] font-bold text-slate-900">Finalizar pedido</h1>
+              <h1 className="text-[24px] font-bold text-slate-900">
+                {isDineInExperience ? "Enviar para a cozinha" : "Finalizar pedido"}
+              </h1>
             </div>
           </div>
           <div className="rounded-full bg-[#111827] px-4 py-2 text-sm font-semibold text-white">
@@ -477,7 +551,7 @@ export function CheckoutPageClient({
           </div>
         </header>
 
-        {!customer ? (
+        {!customer && !isDineInExperience ? (
           <div className="mt-5 rounded-[24px] border border-[#ffd7d4] bg-[#fff4f2] px-5 py-4 text-sm text-[#b5302c]">
             Identificacao obrigatoria para concluir. Voce pode preencher abaixo ou{" "}
             <Link className="font-semibold underline" href={`/r/${slug}/identificacao`}>
@@ -494,7 +568,11 @@ export function CheckoutPageClient({
             </span>
             <div>
               <h2 className="text-base font-bold text-slate-900">Conta e contato</h2>
-              <p className="text-sm text-slate-500">Os dados ficam salvos para os proximos pedidos.</p>
+              <p className="text-sm text-slate-500">
+                {isDineInExperience
+                  ? "Nome e telefone identificam a comanda da mesa."
+                  : "Os dados ficam salvos para os proximos pedidos."}
+              </p>
             </div>
           </div>
 
@@ -520,128 +598,170 @@ export function CheckoutPageClient({
               <MapPin size={18} />
             </span>
             <div>
-              <h2 className="text-base font-bold text-slate-900">Entrega ou retirada</h2>
-              <p className="text-sm text-slate-500">Retirada remove a taxa de entrega automaticamente.</p>
+              <h2 className="text-base font-bold text-slate-900">
+                {isDineInExperience ? "Mesa e comanda" : "Entrega ou retirada"}
+              </h2>
+              <p className="text-sm text-slate-500">
+                {isDineInExperience
+                  ? "Escolha a mesa para acumular os pedidos na mesma comanda."
+                  : "Retirada remove a taxa de entrega automaticamente."}
+              </p>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            {restaurant.deliveryActive ? (
-              <button
-                className={`rounded-[18px] px-4 py-3 text-sm font-semibold transition ${
-                  form.orderType === "DELIVERY"
-                    ? "bg-[#111827] text-white"
-                    : "border border-slate-200 bg-white text-slate-700"
-                }`}
-                type="button"
-                onClick={() => setForm((current) => ({ ...current, orderType: "DELIVERY" }))}
-              >
-                Entrega
-              </button>
-            ) : null}
-            {restaurant.pickupActive ? (
-              <button
-                className={`rounded-[18px] px-4 py-3 text-sm font-semibold transition ${
-                  form.orderType === "PICKUP"
-                    ? "bg-[#111827] text-white"
-                    : "border border-slate-200 bg-white text-slate-700"
-                }`}
-                type="button"
-                onClick={() => setForm((current) => ({ ...current, orderType: "PICKUP" }))}
-              >
-                Retirada
-              </button>
-            ) : null}
-          </div>
-
-          {form.orderType === "DELIVERY" ? (
+          {isDineInExperience ? (
             <div className="mt-4 grid gap-3">
-              <input
+              <select
                 className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
-                placeholder="CEP"
-                value={zipCode}
-                onChange={(event) => {
-                  setZipCode(formatZipCode(event.target.value));
-                  setZipCodeLookupError("");
-                }}
-              />
-              {isResolvingZipCode ? (
-                <p className="text-xs text-slate-500">Buscando endereco pelo CEP...</p>
-              ) : null}
-              {!isResolvingZipCode && zipCodeResolvedLocation ? (
-                <p className="text-xs text-emerald-700">
-                  Endereco localizado em {zipCodeResolvedLocation}. Confira rua e numero.
-                </p>
-              ) : null}
-              {!isResolvingZipCode && zipCodeLookupError ? (
-                <p className="text-xs text-rose-600">{zipCodeLookupError}</p>
-              ) : null}
-              <input
-                className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
-                placeholder="Rua"
-                value={street}
-                onChange={(event) => setStreet(event.target.value)}
-              />
-              <div className="grid grid-cols-[minmax(0,1fr)_112px] gap-3">
-                <input
-                  className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
-                  placeholder="Bairro / localidade"
-                  value={form.customerNeighborhood}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      customerNeighborhood: event.target.value,
-                    }))
-                  }
-                />
-                <input
-                  className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
-                  placeholder="Numero"
-                  value={streetNumber}
-                  onChange={(event) => setStreetNumber(event.target.value)}
-                />
-              </div>
-              <button
-                className="flex items-center justify-center gap-2 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800"
-                type="button"
-                onClick={() => setIsMapPickerOpen(true)}
+                value={form.tableId}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    tableId: event.target.value,
+                  }))
+                }
               >
-                <MapPin size={16} />
-                Selecionar no mapa
-              </button>
-              <div className="rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
-                  Regra de entrega
-                </p>
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      Entrega gratis ate {restaurant.freeDeliveryRadiusKm.toFixed(1).replace(".", ",")} km
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Fora desse raio, a taxa base aplicada e {formatCurrency(restaurant.deliveryFee)}.
-                    </p>
-                  </div>
-                  {isCalculatingDelivery ? (
-                    <span className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white">
-                      Calculando...
-                    </span>
-                  ) : null}
+                <option value="">Selecione a mesa</option>
+                {restaurant.diningTables.map((table) => (
+                  <option key={table.id} value={table.id}>
+                    {table.label}
+                    {table.area ? ` - ${table.area}` : ""}
+                  </option>
+                ))}
+              </select>
+
+              {tableSession ? (
+                <div className="rounded-[18px] border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
+                  Comanda atual vinculada a <span className="font-semibold">{tableSession.tableLabel}</span>.
+                  Novos pedidos vao somar nesta mesa ate o encerramento.
                 </div>
-                {deliveryQuote ? (
-                  <p className="mt-3 text-xs text-slate-600">
-                    Distancia estimada: <span className="font-semibold text-slate-900">{deliveryQuote.distanceKm.toFixed(2).replace(".", ",")} km</span>.{" "}
-                    {deliveryQuote.qualifiesForFreeDelivery
-                      ? "Este endereco recebe entrega gratis."
-                      : `Taxa aplicada: ${formatCurrency(deliveryQuote.deliveryFee)}.`}
-                  </p>
+              ) : (
+                <div className="rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-4 text-sm text-slate-600">
+                  O pedido sera enviado para a cozinha e acumulado na mesa escolhida.
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {restaurant.deliveryActive ? (
+                  <button
+                    className={`rounded-[18px] px-4 py-3 text-sm font-semibold transition ${
+                      form.orderType === "DELIVERY"
+                        ? "bg-[#111827] text-white"
+                        : "border border-slate-200 bg-white text-slate-700"
+                    }`}
+                    type="button"
+                    onClick={() => setForm((current) => ({ ...current, orderType: "DELIVERY" }))}
+                  >
+                    Entrega
+                  </button>
                 ) : null}
-                {deliveryQuoteError ? (
-                  <p className="mt-3 text-xs text-rose-600">{deliveryQuoteError}</p>
+                {restaurant.pickupActive ? (
+                  <button
+                    className={`rounded-[18px] px-4 py-3 text-sm font-semibold transition ${
+                      form.orderType === "PICKUP"
+                        ? "bg-[#111827] text-white"
+                        : "border border-slate-200 bg-white text-slate-700"
+                    }`}
+                    type="button"
+                    onClick={() => setForm((current) => ({ ...current, orderType: "PICKUP" }))}
+                  >
+                    Retirada
+                  </button>
                 ) : null}
               </div>
-            </div>
-          ) : null}
+
+              {form.orderType === "DELIVERY" ? (
+                <div className="mt-4 grid gap-3">
+                  <input
+                    className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
+                    placeholder="CEP"
+                    value={zipCode}
+                    onChange={(event) => {
+                      setZipCode(formatZipCode(event.target.value));
+                      setZipCodeLookupError("");
+                    }}
+                  />
+                  {isResolvingZipCode ? (
+                    <p className="text-xs text-slate-500">Buscando endereco pelo CEP...</p>
+                  ) : null}
+                  {!isResolvingZipCode && zipCodeResolvedLocation ? (
+                    <p className="text-xs text-emerald-700">
+                      Endereco localizado em {zipCodeResolvedLocation}. Confira rua e numero.
+                    </p>
+                  ) : null}
+                  {!isResolvingZipCode && zipCodeLookupError ? (
+                    <p className="text-xs text-rose-600">{zipCodeLookupError}</p>
+                  ) : null}
+                  <input
+                    className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
+                    placeholder="Rua"
+                    value={street}
+                    onChange={(event) => setStreet(event.target.value)}
+                  />
+                  <div className="grid grid-cols-[minmax(0,1fr)_112px] gap-3">
+                    <input
+                      className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
+                      placeholder="Bairro / localidade"
+                      value={form.customerNeighborhood}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          customerNeighborhood: event.target.value,
+                        }))
+                      }
+                    />
+                    <input
+                      className="w-full rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[#e3342f]"
+                      placeholder="Numero"
+                      value={streetNumber}
+                      onChange={(event) => setStreetNumber(event.target.value)}
+                    />
+                  </div>
+                  <button
+                    className="flex items-center justify-center gap-2 rounded-[18px] border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800"
+                    type="button"
+                    onClick={() => setIsMapPickerOpen(true)}
+                  >
+                    <MapPin size={16} />
+                    Selecionar no mapa
+                  </button>
+                  <div className="rounded-[18px] border border-slate-200 bg-[#fbfbfb] px-4 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                      Regra de entrega
+                    </p>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          Entrega gratis ate {restaurant.freeDeliveryRadiusKm.toFixed(1).replace(".", ",")} km
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Fora desse raio, a taxa base aplicada e {formatCurrency(restaurant.deliveryFee)}.
+                        </p>
+                      </div>
+                      {isCalculatingDelivery ? (
+                        <span className="rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white">
+                          Calculando...
+                        </span>
+                      ) : null}
+                    </div>
+                    {deliveryQuote ? (
+                      <p className="mt-3 text-xs text-slate-600">
+                        Distancia estimada: <span className="font-semibold text-slate-900">{deliveryQuote.distanceKm.toFixed(2).replace(".", ",")} km</span>.{" "}
+                        {deliveryQuote.qualifiesForFreeDelivery
+                          ? "Este endereco recebe entrega gratis."
+                          : `Taxa aplicada: ${formatCurrency(deliveryQuote.deliveryFee)}.`}
+                      </p>
+                    ) : null}
+                    {deliveryQuoteError ? (
+                      <p className="mt-3 text-xs text-rose-600">{deliveryQuoteError}</p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
         </section>
 
         <section className="mt-4 rounded-[28px] bg-white p-5 shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
@@ -651,7 +771,11 @@ export function CheckoutPageClient({
             </span>
             <div>
               <h2 className="text-base font-bold text-slate-900">Pagamento</h2>
-              <p className="text-sm text-slate-500">A forma escolhida vai registrada no pedido.</p>
+              <p className="text-sm text-slate-500">
+                {isDineInExperience
+                  ? "A comanda fica aberta e o pagamento sera encerrado no gerencial."
+                  : "A forma escolhida vai registrada no pedido."}
+              </p>
             </div>
           </div>
 
@@ -755,8 +879,14 @@ export function CheckoutPageClient({
               <span>{formatCurrency(subtotal)}</span>
             </div>
             <div className="mt-2 flex items-center justify-between text-sm text-white/70">
-              <span>Taxa de entrega</span>
-              <span>{deliveryFee === 0 ? "Gratis" : formatCurrency(deliveryFee)}</span>
+              <span>{isDineInExperience ? "Mesa" : "Taxa de entrega"}</span>
+              <span>
+                {isDineInExperience
+                  ? form.tableIdentifier || tableSession?.tableIdentifier || "--"
+                  : deliveryFee === 0
+                    ? "Gratis"
+                    : formatCurrency(deliveryFee)}
+              </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-base font-semibold text-white">
               <span>Total</span>
@@ -770,21 +900,27 @@ export function CheckoutPageClient({
             form="checkout-form"
             disabled={isSubmitting || !restaurant.isOpen}
           >
-            {isSubmitting ? "Salvando pedido..." : "Finalizar pedido e abrir WhatsApp"}
+            {isSubmitting
+              ? "Salvando pedido..."
+              : isDineInExperience
+                ? "Enviar pedido para a cozinha"
+                : "Finalizar pedido e abrir WhatsApp"}
           </button>
         </div>
       </div>
 
-      <LocationMapPickerSheet
-        open={isMapPickerOpen}
-        slug={slug}
-        restaurantCenter={{
-          latitude: restaurant.latitude,
-          longitude: restaurant.longitude,
-        }}
-        onClose={() => setIsMapPickerOpen(false)}
-        onApply={handleApplyMapLocation}
-      />
+      {!isDineInExperience ? (
+        <LocationMapPickerSheet
+          open={isMapPickerOpen}
+          slug={slug}
+          restaurantCenter={{
+            latitude: restaurant.latitude,
+            longitude: restaurant.longitude,
+          }}
+          onClose={() => setIsMapPickerOpen(false)}
+          onApply={handleApplyMapLocation}
+        />
+      ) : null}
     </>
   );
 }

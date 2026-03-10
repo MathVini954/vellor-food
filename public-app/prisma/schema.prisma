@@ -40,6 +40,14 @@ enum PaymentStatus {
 enum OrderType {
   DELIVERY
   PICKUP
+  DINE_IN
+}
+
+enum TableSessionStatus {
+  OPEN
+  CLOSED
+  MERGED
+  CANCELED
 }
 
 enum OfferType {
@@ -205,6 +213,10 @@ model Restaurant {
   acceptCash        Boolean     @default(true)
   acceptPix         Boolean     @default(true)
   acceptCardOnDelivery Boolean  @default(true)
+  adminModuleEnabled Boolean    @default(true)
+  publicOrderingEnabled Boolean @default(true)
+  digitalMenuEnabled Boolean    @default(false)
+  digitalMenuToken   String?    @unique
   pixKey            String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -215,9 +227,50 @@ model Restaurant {
   orders            Order[]
   offers            Offer[]
   deliveryAreas     DeliveryArea[]
+  diningTables      DiningTable[]
+  tableSessions     TableSession[]
   contract          RestaurantContract?
 
   @@index([companyId])
+}
+
+model DiningTable {
+  id           String       @id @default(cuid())
+  restaurantId String
+  identifier   String
+  label        String
+  area         String?
+  seats        Int?
+  sortOrder    Int          @default(0)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  restaurant   Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  sessions     TableSession[]
+
+  @@index([restaurantId, sortOrder])
+  @@unique([restaurantId, identifier])
+}
+
+model TableSession {
+  id                  String            @id @default(cuid())
+  restaurantId        String
+  diningTableId       String
+  status              TableSessionStatus @default(OPEN)
+  notes               String?
+  openedAt            DateTime          @default(now())
+  closedAt            DateTime?
+  mergedIntoSessionId String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  restaurant          Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  diningTable         DiningTable       @relation(fields: [diningTableId], references: [id], onDelete: Restrict)
+  orders              Order[]
+  mergedIntoSession   TableSession?     @relation("MergedTableSessions", fields: [mergedIntoSessionId], references: [id], onDelete: SetNull)
+  mergedFromSessions  TableSession[]    @relation("MergedTableSessions")
+
+  @@index([restaurantId, status, openedAt])
+  @@index([diningTableId, status])
 }
 
 model RestaurantContract {
@@ -290,6 +343,7 @@ model Order {
   id                   String         @id @default(cuid())
   restaurantId         String
   customerId           String
+  tableSessionId       String?
   customerName         String
   customerPhone        String
   customerAddress      String?
@@ -306,10 +360,12 @@ model Order {
   updatedAt            DateTime       @updatedAt
   restaurant           Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   customer             Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  tableSession         TableSession?  @relation(fields: [tableSessionId], references: [id], onDelete: SetNull)
   items                OrderItem[]
 
   @@index([restaurantId, createdAt])
   @@index([customerId])
+  @@index([tableSessionId])
 }
 
 model OrderItem {

@@ -9,7 +9,8 @@ export type Metric = {
 
 export type AdminSection =
   | "Dashboard"
-  | "Pedidos"
+  | "PedidosOnline"
+  | "Mesas"
   | "Cardapio"
   | "Ofertas"
   | "Clientes"
@@ -38,6 +39,52 @@ export type Order = {
   time: string;
   createdAt: string;
   address: string;
+  channel: "ONLINE" | "TABLE";
+  channelLabel: string;
+  orderTypeLabel: string;
+  paymentMethodLabel: string;
+  notes: string | null;
+  tableLabel: string | null;
+  tableSessionId: string | null;
+};
+
+export type DiningTable = {
+  id: string;
+  identifier: string;
+  label: string;
+  area: string;
+  seats: number | null;
+  sortOrder: number;
+  isActive: boolean;
+  status: "Livre" | "Ocupada";
+  total: string;
+  orderCount: number;
+  customerCount: number;
+  openedAt: string | null;
+  openSessionId: string | null;
+};
+
+export type TableSession = {
+  id: string;
+  tableId: string;
+  tableIdentifier: string;
+  tableLabel: string;
+  status: "Aberta" | "Encerrada" | "Mesclada" | "Cancelada";
+  openedAt: string;
+  closedAt: string | null;
+  total: string;
+  itemCount: number;
+  customerCount: number;
+  notes: string | null;
+  customerNames: string[];
+  orders: Order[];
+};
+
+export type FeatureAccess = {
+  adminEnabled: boolean;
+  publicOrderingEnabled: boolean;
+  digitalMenuEnabled: boolean;
+  digitalMenuUrl: string | null;
 };
 
 export type ProductStatus = "Ativo" | "Inativo";

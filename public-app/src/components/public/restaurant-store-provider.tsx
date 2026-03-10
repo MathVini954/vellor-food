@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -13,12 +12,15 @@ import {
   customerStorageKey,
   favoritesStorageKey,
   guestStorageKey,
+  tableSessionStorageKey,
 } from "@/lib/session";
 import type {
   CartItem,
   MenuProductCard,
   PublicCustomerSession,
+  PublicExperienceMode,
   PublicRestaurant,
+  PublicTableSessionSummary,
 } from "@/types/public";
 import {
   findCustomizationOption,
@@ -29,9 +31,11 @@ import { ProductCustomizationSheet } from "./product-customization-sheet";
 type RestaurantStoreContextValue = {
   slug: string;
   restaurant: PublicRestaurant;
+  experienceMode: PublicExperienceMode;
   cart: CartItem[];
   favorites: string[];
   customer: PublicCustomerSession | null;
+  tableSession: PublicTableSessionSummary | null;
   guestAllowed: boolean;
   hydrated: boolean;
   itemCount: number;
@@ -46,6 +50,7 @@ type RestaurantStoreContextValue = {
   removeItem: (cartItemId: string) => void;
   clearCart: () => void;
   setCustomer: (customer: PublicCustomerSession | null) => void;
+  setTableSession: (tableSession: PublicTableSessionSummary | null) => void;
   setGuestAllowed: (value: boolean) => void;
   isFavorite: (productId: string) => boolean;
   toggleFavorite: (productId: string) => void;
@@ -60,6 +65,8 @@ type RestaurantStoreProviderProps = {
   slug: string;
   restaurant: PublicRestaurant;
   initialCustomer: PublicCustomerSession | null;
+  initialTableSession: PublicTableSessionSummary | null;
+  experienceMode: PublicExperienceMode;
   children: ReactNode;
 };
 
@@ -105,48 +112,61 @@ function normalizeSavedCart(rawCart: unknown): CartItem[] {
     .filter((item) => item.quantity > 0);
 }
 
+function readStoredJson<T>(key: string): T | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(key);
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawValue) as T;
+  } catch {
+    return null;
+  }
+}
+
 export function RestaurantStoreProvider({
   slug,
   restaurant,
   initialCustomer,
+  initialTableSession,
+  experienceMode,
   children,
 }: RestaurantStoreProviderProps) {
-  const [hydrated, setHydrated] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [customer, setCustomer] = useState<PublicCustomerSession | null>(initialCustomer);
-  const [guestAllowed, setGuestAllowed] = useState(Boolean(initialCustomer));
+  const hydrated = true;
+  const [cart, setCart] = useState<CartItem[]>(() =>
+    normalizeSavedCart(readStoredJson<unknown>(cartStorageKey(slug))),
+  );
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    const storedFavorites = readStoredJson<unknown>(favoritesStorageKey(slug));
+
+    return Array.isArray(storedFavorites)
+      ? storedFavorites.filter((value): value is string => typeof value === "string")
+      : [];
+  });
+  const [customer, setCustomerState] = useState<PublicCustomerSession | null>(
+    () => readStoredJson<PublicCustomerSession>(customerStorageKey(slug)) ?? initialCustomer,
+  );
+  const [tableSession, setTableSession] = useState<PublicTableSessionSummary | null>(
+    () => readStoredJson<PublicTableSessionSummary>(tableSessionStorageKey(slug)) ?? initialTableSession,
+  );
+  const [guestAllowed, setGuestAllowed] = useState(() => {
+    const storedCustomer = readStoredJson<PublicCustomerSession>(customerStorageKey(slug));
+    const storedGuestAllowed = readStoredJson<boolean>(guestStorageKey(slug));
+
+    return (
+      Boolean(storedCustomer ?? initialCustomer) ||
+      storedGuestAllowed === true ||
+      experienceMode === "DINE_IN"
+    );
+  });
   const [customizerProduct, setCustomizerProduct] = useState<MenuProductCard | null>(null);
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    const savedCart = window.localStorage.getItem(cartStorageKey(slug));
-    const savedCustomer = window.localStorage.getItem(customerStorageKey(slug));
-    const savedGuest = window.localStorage.getItem(guestStorageKey(slug));
-    const savedFavorites = window.localStorage.getItem(favoritesStorageKey(slug));
-
-    if (savedCart) {
-      setCart(normalizeSavedCart(JSON.parse(savedCart)));
-    }
-
-    if (savedCustomer) {
-      setCustomer(JSON.parse(savedCustomer));
-    } else if (initialCustomer) {
-      setCustomer(initialCustomer);
-    }
-
-    if (savedGuest) {
-      setGuestAllowed(savedGuest === "true");
-    } else if (initialCustomer) {
-      setGuestAllowed(true);
-    }
-
-    if (savedFavorites) {
-      setFavorites(JSON.parse(savedFavorites));
-    }
-
-    setHydrated(true);
-  }, [initialCustomer, slug]);
 
   useEffect(() => {
     if (!hydrated) {
@@ -169,10 +189,22 @@ export function RestaurantStoreProvider({
       return;
     }
 
+    if (tableSession) {
+      window.localStorage.setItem(tableSessionStorageKey(slug), JSON.stringify(tableSession));
+      return;
+    }
+
+    window.localStorage.removeItem(tableSessionStorageKey(slug));
+  }, [hydrated, slug, tableSession]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
     if (customer) {
       window.localStorage.setItem(customerStorageKey(slug), JSON.stringify(customer));
       window.localStorage.removeItem(guestStorageKey(slug));
-      setGuestAllowed(true);
       return;
     }
 
@@ -186,6 +218,14 @@ export function RestaurantStoreProvider({
 
     window.localStorage.setItem(guestStorageKey(slug), String(guestAllowed));
   }, [customer, guestAllowed, hydrated, slug]);
+
+  function setCustomer(customerValue: PublicCustomerSession | null) {
+    setCustomerState(customerValue);
+
+    if (customerValue) {
+      setGuestAllowed(true);
+    }
+  }
 
   function buildSelectedSummary(product: MenuProductCard, optionIds: string[]) {
     const removableLabels = product.customizationConfig.removableIngredients
@@ -369,51 +409,42 @@ export function RestaurantStoreProvider({
     closeCustomizer();
   }
 
-  const value = useMemo<RestaurantStoreContextValue>(() => {
-    const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
-    const subtotal = cart.reduce(
-      (total, item) => total + (item.price + item.extraPrice) * item.quantity,
-      0,
-    );
+  const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = cart.reduce(
+    (total, item) => total + (item.price + item.extraPrice) * item.quantity,
+    0,
+  );
 
-    return {
-      slug,
-      restaurant,
-      cart,
-      favorites,
-      customer,
-      guestAllowed,
-      hydrated,
-      itemCount,
-      subtotal,
-      customizerProduct,
-      selectedOptionIds,
-      addItem,
-      incrementItem,
-      decrementItem,
-      incrementCartItem,
-      decrementCartItem,
-      removeItem,
-      clearCart,
-      setCustomer,
-      setGuestAllowed,
-      isFavorite,
-      toggleFavorite,
-      closeCustomizer,
-      toggleCustomizationOption,
-      confirmCustomization,
-    };
-  }, [
+  const value: RestaurantStoreContextValue = {
     slug,
     restaurant,
+    experienceMode,
     cart,
     favorites,
     customer,
+    tableSession,
     guestAllowed,
     hydrated,
+    itemCount,
+    subtotal,
     customizerProduct,
     selectedOptionIds,
-  ]);
+    addItem,
+    incrementItem,
+    decrementItem,
+    incrementCartItem,
+    decrementCartItem,
+    removeItem,
+    clearCart,
+    setCustomer,
+    setTableSession,
+    setGuestAllowed,
+    isFavorite,
+    toggleFavorite,
+    closeCustomizer,
+    toggleCustomizationOption,
+    confirmCustomization,
+  };
 
   return (
     <RestaurantStoreContext.Provider value={value}>

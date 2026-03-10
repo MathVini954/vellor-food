@@ -52,11 +52,17 @@ export async function runProvisioningJob(input: {
   companyId: string;
   productCode: SaaSProductCode;
   requestedByEmail?: string | null;
+  featureAccess?: {
+    adminEnabled: boolean;
+    publicOrderingEnabled: boolean;
+    digitalMenuEnabled: boolean;
+  };
 }) {
   const product = await getProductByCode(input.productCode);
   const requestPayload = {
     companyId: input.companyId,
     productCode: input.productCode,
+    featureAccess: input.featureAccess ?? null,
   };
 
   const job = await prisma.provisioningJob.create({
@@ -91,6 +97,7 @@ export async function runProvisioningJob(input: {
         jobId: job.id,
         companyId: input.companyId,
         productCode: input.productCode,
+        featureAccess: input.featureAccess ?? null,
       }),
       cache: "no-store",
     });

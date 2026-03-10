@@ -1,5 +1,15 @@
 import type { ProductCustomizationConfig } from "@/lib/product-customization";
 
+export type PublicExperienceMode = "ONLINE" | "DINE_IN";
+
+export type PublicDiningTable = {
+  id: string;
+  identifier: string;
+  label: string;
+  area: string | null;
+  seats: number | null;
+};
+
 export type PublicRestaurant = {
   id: string;
   slug: string;
@@ -25,7 +35,10 @@ export type PublicRestaurant = {
   acceptCash: boolean;
   acceptPix: boolean;
   acceptCardOnDelivery: boolean;
+  publicOrderingEnabled: boolean;
+  digitalMenuEnabled: boolean;
   pixKey: string | null;
+  diningTables: PublicDiningTable[];
 };
 
 export type PublicCustomerSession = {
@@ -109,7 +122,7 @@ export type CartItem = {
   selectedOptionIds: string[];
 };
 
-export type OrderType = "DELIVERY" | "PICKUP";
+export type OrderType = "DELIVERY" | "PICKUP" | "DINE_IN";
 
 export type PaymentMethod = "CASH" | "PIX" | "CARD_ON_DELIVERY" | "PAY_ON_PICKUP";
 
@@ -118,6 +131,8 @@ export type CheckoutFormState = {
   customerPhone: string;
   customerAddress: string;
   customerNeighborhood: string;
+  tableId: string;
+  tableIdentifier: string;
   orderType: OrderType;
   paymentMethod: PaymentMethod;
   notes: string;
@@ -142,6 +157,7 @@ export type ConfirmationOrder = {
   paymentMethod: PaymentMethod;
   paymentMethodLabel: string;
   notes: string | null;
+  tableLabel: string | null;
   restaurant: {
     name: string;
     whatsapp: string;
@@ -178,4 +194,25 @@ export type PublicOrderSummary = {
     productName: string;
     quantity: number;
   }>;
+};
+
+export type PublicTableSessionOrder = PublicOrderSummary & {
+  customerName: string;
+  notes: string | null;
+};
+
+export type PublicTableSessionSummary = {
+  id: string;
+  tableId: string;
+  tableLabel: string;
+  tableIdentifier: string;
+  openedAt: string;
+  closedAt: string | null;
+  status: "OPEN" | "CLOSED" | "MERGED" | "CANCELED";
+  total: number;
+  itemCount: number;
+  customerCount: number;
+  notes: string | null;
+  customerNames: string[];
+  orders: PublicTableSessionOrder[];
 };

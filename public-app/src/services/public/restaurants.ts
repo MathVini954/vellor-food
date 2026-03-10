@@ -12,15 +12,79 @@ import type {
   MenuProductCard,
   PublicCategoryPageData,
   PublicCustomerSession,
+  PublicDiningTable,
   PublicOffer,
   PublicOrderSummary,
   PublicProductDetail,
   PublicRestaurant,
   RestaurantDiscoveryData,
+  PublicTableSessionOrder,
+  PublicTableSessionSummary,
 } from "@/types/public";
 
 function decimalToNumber(value: { toNumber(): number } | number) {
   return typeof value === "number" ? value : value.toNumber();
+}
+
+function mapDiningTable(table: {
+  id: string;
+  identifier: string;
+  label: string;
+  area: string | null;
+  seats: number | null;
+}): PublicDiningTable {
+  return {
+    id: table.id,
+    identifier: table.identifier,
+    label: table.label,
+    area: table.area,
+    seats: table.seats,
+  };
+}
+
+function getPaymentMethodLabel(paymentMethod: PaymentMethod, orderType: "DELIVERY" | "PICKUP" | "DINE_IN") {
+  if (orderType === "DINE_IN" && paymentMethod === "PAY_ON_PICKUP") {
+    return "Pagamento no caixa";
+  }
+
+  const paymentMethodLabelMap: Record<PaymentMethod, string> = {
+    CASH: "Dinheiro",
+    PIX: "Pix",
+    CARD_ON_DELIVERY: "Cartao na entrega",
+    PAY_ON_PICKUP: "Pagar na retirada",
+  };
+
+  return paymentMethodLabelMap[paymentMethod];
+}
+
+function mapPublicOrderSummary(order: {
+  id: string;
+  status: "NEW" | "ACCEPTED" | "PREPARING" | "SENT" | "DELIVERED" | "CANCELED";
+  createdAt: Date;
+  total: Prisma.Decimal | number;
+  orderType: "DELIVERY" | "PICKUP" | "DINE_IN";
+  paymentMethod: PaymentMethod;
+  restaurant: {
+    name: string;
+  };
+  items: Array<{
+    id: string;
+    productName: string;
+    quantity: number;
+  }>;
+}): PublicOrderSummary {
+  return {
+    id: order.id,
+    status: order.status,
+    statusLabel: orderStatusLabelMap[order.status],
+    createdAt: order.createdAt.toISOString(),
+    total: decimalToNumber(order.total),
+    orderType: order.orderType,
+    paymentMethodLabel: getPaymentMethodLabel(order.paymentMethod, order.orderType),
+    itemCount: order.items.reduce((total, item) => total + item.quantity, 0),
+    restaurantName: order.restaurant.name,
+    items: order.items,
+  };
 }
 
 function mapProductCard(product: {
@@ -131,7 +195,20 @@ export async function getRestaurantBySlug(slug: string): Promise<PublicRestauran
       acceptCash: true,
       acceptPix: true,
       acceptCardOnDelivery: true,
+      publicOrderingEnabled: true,
+      digitalMenuEnabled: true,
       pixKey: true,
+      diningTables: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+        select: {
+          id: true,
+          identifier: true,
+          label: true,
+          area: true,
+          seats: true,
+        },
+      },
     },
   });
 
@@ -146,6 +223,7 @@ export async function getRestaurantBySlug(slug: string): Promise<PublicRestauran
     deliveryFee: decimalToNumber(restaurant.deliveryFee),
     freeDeliveryRadiusKm: decimalToNumber(restaurant.freeDeliveryRadiusKm),
     minimumOrderValue: decimalToNumber(restaurant.minimumOrderValue),
+    diningTables: restaurant.diningTables.map(mapDiningTable),
   };
 }
 
@@ -156,11 +234,25 @@ export async function getRestaurantBySlugOrThrow(slug: string) {
     notFound();
   }
 
-  if (!restaurant.whatsapp) {
-    throw new Error("Restaurant is missing WhatsApp configuration.");
+  return restaurant;
+}
+
+export async function getRestaurantByDigitalMenuToken(token: string) {
+  const restaurantRecord = await prisma.restaurant.findFirst({
+    where: {
+      digitalMenuToken: token,
+      digitalMenuEnabled: true,
+    },
+    select: {
+      slug: true,
+    },
+  });
+
+  if (!restaurantRecord) {
+    return null;
   }
 
-  return restaurant;
+  return getRestaurantBySlug(restaurantRecord.slug);
 }
 
 export async function getMenuByRestaurantSlug(slug: string): Promise<MenuCategorySection[]> {
@@ -592,6 +684,15 @@ export async function getOrderConfirmationById(
       orderType: true,
       paymentMethod: true,
       notes: true,
+      tableSession: {
+        select: {
+          diningTable: {
+            select: {
+              label: true,
+            },
+          },
+        },
+      },
       restaurant: {
         select: {
           name: true,
@@ -614,13 +715,6 @@ export async function getOrderConfirmationById(
     return null;
   }
 
-  const paymentMethodLabelMap: Record<PaymentMethod, string> = {
-    CASH: "Dinheiro",
-    PIX: "Pix",
-    CARD_ON_DELIVERY: "Cartao na entrega",
-    PAY_ON_PICKUP: "Pagar na retirada",
-  };
-
   return {
     id: order.id,
     customerName: order.customerName,
@@ -632,8 +726,9 @@ export async function getOrderConfirmationById(
     total: decimalToNumber(order.total),
     orderType: order.orderType,
     paymentMethod: order.paymentMethod,
-    paymentMethodLabel: paymentMethodLabelMap[order.paymentMethod],
+    paymentMethodLabel: getPaymentMethodLabel(order.paymentMethod, order.orderType),
     notes: order.notes,
+    tableLabel: order.tableSession?.diningTable.label ?? null,
     restaurant: order.restaurant,
     items: order.items.map((item) => ({
       id: item.id,
@@ -662,6 +757,9 @@ export async function getOrdersByRestaurantAndCustomerId(
     where: {
       restaurantId,
       customerId,
+      orderType: {
+        not: "DINE_IN",
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -688,23 +786,87 @@ export async function getOrdersByRestaurantAndCustomerId(
     },
   });
 
-  const paymentMethodLabelMap: Record<PaymentMethod, string> = {
-    CASH: "Dinheiro",
-    PIX: "Pix",
-    CARD_ON_DELIVERY: "Cartao na entrega",
-    PAY_ON_PICKUP: "Pagar na retirada",
-  };
+  return orders.map(mapPublicOrderSummary);
+}
 
-  return orders.map((order) => ({
-    id: order.id,
-    status: order.status,
-    statusLabel: orderStatusLabelMap[order.status],
-    createdAt: order.createdAt.toISOString(),
-    total: decimalToNumber(order.total),
-    orderType: order.orderType,
-    paymentMethodLabel: paymentMethodLabelMap[order.paymentMethod],
-    itemCount: order.items.reduce((total, item) => total + item.quantity, 0),
-    restaurantName: order.restaurant.name,
-    items: order.items,
+export async function getTableSessionByRestaurantAndId(
+  restaurantId: string,
+  tableSessionId: string,
+): Promise<PublicTableSessionSummary | null> {
+  const tableSession = await prisma.tableSession.findFirst({
+    where: {
+      id: tableSessionId,
+      restaurantId,
+    },
+    select: {
+      id: true,
+      status: true,
+      openedAt: true,
+      closedAt: true,
+      notes: true,
+      diningTable: {
+        select: {
+          id: true,
+          identifier: true,
+          label: true,
+        },
+      },
+      orders: {
+        where: {
+          orderType: "DINE_IN",
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          total: true,
+          orderType: true,
+          paymentMethod: true,
+          notes: true,
+          customerName: true,
+          restaurant: {
+            select: {
+              name: true,
+            },
+          },
+          items: {
+            select: {
+              id: true,
+              productName: true,
+              quantity: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!tableSession) {
+    return null;
+  }
+
+  const orders: PublicTableSessionOrder[] = tableSession.orders.map((order) => ({
+    ...mapPublicOrderSummary(order),
+    customerName: order.customerName,
+    notes: order.notes,
   }));
+
+  return {
+    id: tableSession.id,
+    tableId: tableSession.diningTable.id,
+    tableLabel: tableSession.diningTable.label,
+    tableIdentifier: tableSession.diningTable.identifier,
+    openedAt: tableSession.openedAt.toISOString(),
+    closedAt: tableSession.closedAt ? tableSession.closedAt.toISOString() : null,
+    status: tableSession.status,
+    total: orders.reduce((sum, order) => sum + order.total, 0),
+    itemCount: orders.reduce((sum, order) => sum + order.itemCount, 0),
+    customerCount: new Set(orders.map((order) => order.customerName)).size,
+    notes: tableSession.notes,
+    customerNames: [...new Set(orders.map((order) => order.customerName))],
+    orders,
+  };
 }

@@ -59,6 +59,9 @@ export async function createCompanyAction(formData: FormData) {
     notes: String(formData.get("notes") ?? ""),
     status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
     productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
+    adminEnabled: formData.get("adminEnabled") === "on",
+    publicOrderingEnabled: formData.get("publicOrderingEnabled") === "on",
+    digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
   });
 
   refreshDashboard();
@@ -73,6 +76,9 @@ export async function updateCompanyStatusAction(formData: FormData) {
     endsAt: String(formData.get("endsAt") ?? ""),
     notes: String(formData.get("notes") ?? ""),
     productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
+    adminEnabled: formData.get("adminEnabled") === "on",
+    publicOrderingEnabled: formData.get("publicOrderingEnabled") === "on",
+    digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
   });
 
   refreshDashboard();

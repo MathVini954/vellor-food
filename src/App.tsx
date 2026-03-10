@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   AdminInitialSetup,
   AdminSection,
@@ -7,6 +7,7 @@ import type {
   RestaurantSettings,
 } from "./types/dashboard";
 import {
+  closeDiningTableSession,
   completeAdminInitialSetup,
   createAdminRestaurant,
   createAdminOffer,
@@ -15,8 +16,11 @@ import {
   deleteAdminProduct,
   getAdminBootstrap,
   loginAdmin,
+  mergeDiningTableSession,
   logoutAdmin,
+  saveDiningTables,
   saveAdminSettings,
+  transferDiningTableSession,
   updateAdminCustomerBlock,
   updateAdminOffer,
   updateAdminOrderStatus,
@@ -34,6 +38,7 @@ import { MenuManagementPage } from "./layouts/MenuManagementPage";
 import { OffersManagementPage } from "./layouts/OffersManagementPage";
 import { OrdersManagementPage } from "./layouts/OrdersManagementPage";
 import { SettingsPage } from "./layouts/SettingsPage";
+import { TablesManagementPage } from "./layouts/TablesManagementPage";
 
 const AUTH_STORAGE_KEY = "restaurant-auth-session";
 const FALLBACK_PLATFORM_NAME = "MesaPilot Gestao";
@@ -42,7 +47,8 @@ const INITIAL_SETUP_PATH = "/primeiro-acesso";
 
 const adminRouteSegments = {
   Dashboard: "dashboard",
-  Pedidos: "pedidos",
+  PedidosOnline: "pedidos-online",
+  Mesas: "mesas",
   Cardapio: "cardapio",
   Ofertas: "ofertas",
   Clientes: "clientes",
@@ -172,6 +178,59 @@ function ErrorState({
   );
 }
 
+type LiveNotification = {
+  id: string;
+  title: string;
+  body: string;
+  accent: "online" | "tables";
+};
+
+function FloatingNotifications({
+  notifications,
+  unreadSignals,
+}: {
+  notifications: LiveNotification[];
+  unreadSignals: { online: number; tables: number };
+}) {
+  if (!notifications.length && !unreadSignals.online && !unreadSignals.tables) {
+    return null;
+  }
+
+  return (
+    <div className="pointer-events-none fixed right-5 top-5 z-[100] flex w-full max-w-sm flex-col gap-3">
+      {notifications.map((notification) => (
+        <div
+          key={notification.id}
+          className={`rounded-[28px] border bg-white/95 px-5 py-4 shadow-[0_25px_60px_rgba(15,23,42,0.22)] backdrop-blur ${
+            notification.accent === "tables" ? "border-emerald-200" : "border-sky-200"
+          }`}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
+            {notification.accent === "tables" ? "Mesa" : "Online"}
+          </p>
+          <h3 className="mt-2 text-sm font-semibold text-slate-950">{notification.title}</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-500">{notification.body}</p>
+        </div>
+      ))}
+
+      {(unreadSignals.online > 0 || unreadSignals.tables > 0) ? (
+        <div className="pointer-events-auto flex flex-wrap gap-2">
+          {unreadSignals.online > 0 ? (
+            <div className="rounded-full border border-sky-200 bg-white px-4 py-2 text-xs font-semibold text-sky-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+              {unreadSignals.online} novo(s) em pedidos online
+            </div>
+          ) : null}
+          {unreadSignals.tables > 0 ? (
+            <div className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+              {unreadSignals.tables} novo(s) em mesas
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function App() {
   const [session, setSession] = useState<AdminSession | null>(() => readStoredSession());
   const [pendingInitialSetup, setPendingInitialSetup] = useState<AdminInitialSetup | null>(null);
@@ -179,6 +238,12 @@ export default function App() {
   const [bootstrap, setBootstrap] = useState<AdminBootstrap | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(readStoredSession()));
   const [loadError, setLoadError] = useState("");
+  const [notifications, setNotifications] = useState<LiveNotification[]>([]);
+  const [unreadSignals, setUnreadSignals] = useState({ online: 0, tables: 0 });
+  const seenOrderIdsRef = useRef<{ online: Set<string>; tables: Set<string> }>({
+    online: new Set(),
+    tables: new Set(),
+  });
 
   useEffect(() => {
     function handlePopState() {
@@ -239,6 +304,14 @@ export default function App() {
       return;
     }
 
+    if (section === "PedidosOnline") {
+      setUnreadSignals((current) => ({ ...current, online: 0 }));
+    }
+
+    if (section === "Mesas") {
+      setUnreadSignals((current) => ({ ...current, tables: 0 }));
+    }
+
     const targetPath = buildAdminRoute(section, session.restaurantSlug);
 
     if (pathname === targetPath) {
@@ -260,6 +333,63 @@ export default function App() {
 
     try {
       const payload = await getAdminBootstrap(session.restaurantSlug);
+      const isInitialSync = !bootstrap;
+      const currentSection = getSectionFromPath(pathname)?.section ?? "Dashboard";
+      const nextOnlineIds = new Set(payload.orders.map((order) => order.id));
+      const nextTableIds = new Set(payload.tableOrders.map((order) => order.id));
+
+      if (isInitialSync) {
+        seenOrderIdsRef.current = {
+          online: nextOnlineIds,
+          tables: nextTableIds,
+        };
+      } else {
+        const newOnlineOrders = payload.orders.filter(
+          (order) => !seenOrderIdsRef.current.online.has(order.id),
+        );
+        const newTableOrders = payload.tableOrders.filter(
+          (order) => !seenOrderIdsRef.current.tables.has(order.id),
+        );
+
+        if (newOnlineOrders.length || newTableOrders.length) {
+          const nextNotifications: LiveNotification[] = [
+            ...newOnlineOrders.map((order) => ({
+              id: `online-${order.id}`,
+              title: `Novo pedido online ${order.id}`,
+              body: `${order.customer} • ${order.total}`,
+              accent: "online" as const,
+            })),
+            ...newTableOrders.map((order) => ({
+              id: `table-${order.id}`,
+              title: `${order.tableLabel ?? "Mesa"} recebeu novo pedido`,
+              body: `${order.customer} • ${order.total}`,
+              accent: "tables" as const,
+            })),
+          ];
+
+          setNotifications((current) => [...nextNotifications, ...current].slice(0, 4));
+          window.setTimeout(() => {
+            setNotifications((current) =>
+              current.filter(
+                (notification) =>
+                  !nextNotifications.some((candidate) => candidate.id === notification.id),
+              ),
+            );
+          }, 4200);
+
+          setUnreadSignals((current) => ({
+            online:
+              currentSection === "PedidosOnline" ? current.online : current.online + newOnlineOrders.length,
+            tables: currentSection === "Mesas" ? current.tables : current.tables + newTableOrders.length,
+          }));
+        }
+
+        seenOrderIdsRef.current = {
+          online: nextOnlineIds,
+          tables: nextTableIds,
+        };
+      }
+
       setBootstrap(payload);
       setSession(payload.session);
       persistSession(payload.session);
@@ -355,6 +485,12 @@ export default function App() {
     setPendingInitialSetup(null);
     setBootstrap(null);
     setLoadError("");
+    setNotifications([]);
+    setUnreadSignals({ online: 0, tables: 0 });
+    seenOrderIdsRef.current = {
+      online: new Set(),
+      tables: new Set(),
+    };
     window.history.pushState({}, "", "/");
     setPathname("/");
   }
@@ -500,6 +636,51 @@ export default function App() {
     await loadBootstrap({ silent: true });
   }
 
+  async function handleSaveDiningTables(
+    tables: Array<{
+      id?: string;
+      identifier: string;
+      label: string;
+      area: string;
+      seats: number | null;
+      isActive: boolean;
+    }>,
+  ) {
+    if (!session) {
+      return;
+    }
+
+    await saveDiningTables(session.restaurantSlug, tables);
+    await loadBootstrap({ silent: true });
+  }
+
+  async function handleCloseDiningTableSession(sessionId: string) {
+    if (!session) {
+      return;
+    }
+
+    await closeDiningTableSession(session.restaurantSlug, sessionId);
+    await loadBootstrap({ silent: true });
+  }
+
+  async function handleTransferDiningTableSession(sessionId: string, targetTableId: string) {
+    if (!session) {
+      return;
+    }
+
+    await transferDiningTableSession(session.restaurantSlug, sessionId, targetTableId);
+    await loadBootstrap({ silent: true });
+  }
+
+  async function handleMergeDiningTableSession(sessionId: string, targetSessionId: string) {
+    if (!session) {
+      return;
+    }
+
+    await mergeDiningTableSession(session.restaurantSlug, sessionId, targetSessionId);
+    await loadBootstrap({ silent: true });
+  }
+
   if (!session && pendingInitialSetup) {
     return (
       <InitialSetupPage
@@ -569,10 +750,11 @@ export default function App() {
   const currentSection = getSectionFromPath(pathname)?.section ?? "Dashboard";
   const { restaurantName, userName, platformName } = bootstrap.session;
   void platformName;
+  let page = null;
 
   switch (currentSection) {
-    case "Pedidos":
-      return (
+    case "PedidosOnline":
+      page = (
         <OrdersManagementPage
           restaurantName={restaurantName}
           userName={userName}
@@ -584,8 +766,29 @@ export default function App() {
           onDeleteOrder={handleDeleteOrder}
         />
       );
+      break;
+    case "Mesas":
+      page = (
+        <TablesManagementPage
+          restaurantName={restaurantName}
+          userName={userName}
+          featureAccess={bootstrap.featureAccess}
+          diningTables={bootstrap.diningTables}
+          tableSessions={bootstrap.tableSessions}
+          onLogout={handleLogout}
+          onNavigate={navigateToSection}
+          onSaveTables={handleSaveDiningTables}
+          onAdvanceStatus={handleAdvanceOrderStatus}
+          onCancelOrder={handleCancelOrder}
+          onDeleteOrder={handleDeleteOrder}
+          onCloseSession={handleCloseDiningTableSession}
+          onTransferSession={handleTransferDiningTableSession}
+          onMergeSession={handleMergeDiningTableSession}
+        />
+      );
+      break;
     case "Cardapio":
-      return (
+      page = (
         <MenuManagementPage
           restaurantName={restaurantName}
           userName={userName}
@@ -598,8 +801,9 @@ export default function App() {
           onDeleteProduct={handleDeleteProduct}
         />
       );
+      break;
     case "Ofertas":
-      return (
+      page = (
         <OffersManagementPage
           restaurantName={restaurantName}
           userName={userName}
@@ -612,8 +816,9 @@ export default function App() {
           onToggleOfferStatus={handleToggleOfferStatus}
         />
       );
+      break;
     case "Clientes":
-      return (
+      page = (
         <CustomersManagementPage
           restaurantName={restaurantName}
           userName={userName}
@@ -623,8 +828,9 @@ export default function App() {
           onToggleCustomerBlock={handleToggleCustomerBlock}
         />
       );
+      break;
     case "Configuracoes":
-      return (
+      page = (
         <SettingsPage
           restaurantSlug={session.restaurantSlug}
           restaurantName={restaurantName}
@@ -635,9 +841,10 @@ export default function App() {
           onSaveSettings={handleSaveSettings}
         />
       );
+      break;
     case "Dashboard":
     default:
-      return (
+      page = (
         <HomeDashboardPage
           restaurantName={restaurantName}
           userName={userName}
@@ -647,5 +854,13 @@ export default function App() {
           onNavigate={navigateToSection}
         />
       );
+      break;
   }
+
+  return (
+    <>
+      <FloatingNotifications notifications={notifications} unreadSignals={unreadSignals} />
+      {page}
+    </>
+  );
 }

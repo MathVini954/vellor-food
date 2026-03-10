@@ -3,12 +3,15 @@ import type {
   AdminSession,
   CategoryOption,
   Customer,
+  DiningTable,
+  FeatureAccess,
   MenuProduct,
   Metric,
   Offer,
   Order,
   OrderStatus,
   RestaurantSettings,
+  TableSession,
 } from "../types/dashboard";
 export type { AdminSession } from "../types/dashboard";
 
@@ -23,6 +26,10 @@ export type AdminBootstrap = {
   metrics: Metric[];
   categories: CategoryOption[];
   orders: Order[];
+  tableOrders: Order[];
+  diningTables: DiningTable[];
+  tableSessions: TableSession[];
+  featureAccess: FeatureAccess;
   products: MenuProduct[];
   offers: Offer[];
   customers: Customer[];
@@ -206,6 +213,51 @@ export async function saveAdminSettings(slug: string, settings: RestaurantSettin
   return request(`/restaurants/${slug}/settings`, {
     method: "PUT",
     body: JSON.stringify({ settings }),
+  });
+}
+
+export async function saveDiningTables(
+  slug: string,
+  tables: Array<{
+    id?: string;
+    identifier: string;
+    label: string;
+    area: string;
+    seats: number | null;
+    isActive: boolean;
+  }>,
+) {
+  return request<{ tables: DiningTable[] }>(`/restaurants/${slug}/tables`, {
+    method: "PUT",
+    body: JSON.stringify({ tables }),
+  });
+}
+
+export async function closeDiningTableSession(slug: string, sessionId: string) {
+  return request(`/restaurants/${slug}/table-sessions/${sessionId}/close`, {
+    method: "POST",
+  });
+}
+
+export async function transferDiningTableSession(
+  slug: string,
+  sessionId: string,
+  targetTableId: string,
+) {
+  return request(`/restaurants/${slug}/table-sessions/${sessionId}/transfer`, {
+    method: "POST",
+    body: JSON.stringify({ targetTableId }),
+  });
+}
+
+export async function mergeDiningTableSession(
+  slug: string,
+  sessionId: string,
+  targetSessionId: string,
+) {
+  return request(`/restaurants/${slug}/table-sessions/${sessionId}/merge`, {
+    method: "POST",
+    body: JSON.stringify({ targetSessionId }),
   });
 }
 

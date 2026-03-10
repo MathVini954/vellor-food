@@ -13,6 +13,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const companyId = String(body.companyId ?? "").trim();
     const productCode = String(body.productCode ?? "").trim().toUpperCase();
+    const featureAccess =
+      body.featureAccess && typeof body.featureAccess === "object"
+        ? {
+            adminEnabled: body.featureAccess.adminEnabled !== false,
+            publicOrderingEnabled: body.featureAccess.publicOrderingEnabled !== false,
+            digitalMenuEnabled: Boolean(body.featureAccess.digitalMenuEnabled),
+          }
+        : undefined;
 
     if (!companyId) {
       return NextResponse.json({ error: "companyId nao informado." }, { status: 400 });
@@ -28,6 +36,7 @@ export async function POST(request: Request) {
     const response = await provisionFoodCompany({
       companyId,
       requestOrigin: new URL(request.url).origin,
+      featureAccess,
     });
 
     return NextResponse.json(response);

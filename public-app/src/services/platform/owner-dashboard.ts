@@ -7,6 +7,10 @@ import {
 } from "@prisma/client";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import {
+  ensureDefaultDiningTables,
+  ensureRestaurantDigitalMenuToken,
+} from "@/services/food/dining-room";
 
 function slugifyCompanyName(value: string) {
   return value
@@ -66,6 +70,11 @@ export type ManagedCompanyRecord = {
     orders: number;
     customers: number;
   };
+  featureAccess: {
+    adminEnabled: boolean;
+    publicOrderingEnabled: boolean;
+    digitalMenuEnabled: boolean;
+  };
 };
 
 function toCompanyStatus(status: RestaurantContractStatus): CompanyStatus {
@@ -101,6 +110,9 @@ export async function listManagedCompanies() {
       adminUserName: true,
       adminPasswordTemporary: true,
       onboardingCompleted: true,
+      adminModuleEnabled: true,
+      publicOrderingEnabled: true,
+      digitalMenuEnabled: true,
       city: true,
       state: true,
       createdAt: true,
@@ -122,7 +134,16 @@ export async function listManagedCompanies() {
         },
       },
     },
-  });
+  }).then((restaurants) =>
+    restaurants.map((restaurant) => ({
+      ...restaurant,
+      featureAccess: {
+        adminEnabled: restaurant.adminModuleEnabled,
+        publicOrderingEnabled: restaurant.publicOrderingEnabled,
+        digitalMenuEnabled: restaurant.digitalMenuEnabled,
+      },
+    })),
+  );
 }
 
 export async function createManagedCompany(input: {
@@ -136,6 +157,9 @@ export async function createManagedCompany(input: {
   monthlyPrice?: string;
   notes?: string;
   status?: RestaurantContractStatus;
+  adminEnabled?: boolean;
+  publicOrderingEnabled?: boolean;
+  digitalMenuEnabled?: boolean;
 }) {
   const companyName = input.companyName.trim();
   const primaryContactPhone = input.primaryContactPhone.replace(/\D/g, "");
@@ -146,6 +170,9 @@ export async function createManagedCompany(input: {
   const contractEndsAt = input.contractEndsAt?.trim() ?? "";
   const notes = input.notes?.trim() ?? "";
   const status = input.status ?? "ACTIVE";
+  const adminEnabled = input.adminEnabled ?? true;
+  const publicOrderingEnabled = input.publicOrderingEnabled ?? true;
+  const digitalMenuEnabled = input.digitalMenuEnabled ?? false;
 
   if (!companyName || !primaryContactPhone || !adminName || !email || !temporaryPassword) {
     throw new Error("Preencha os campos obrigatorios da empresa.");
@@ -230,6 +257,9 @@ export async function createManagedCompany(input: {
         isOpen: false,
         deliveryActive: false,
         pickupActive: false,
+        adminModuleEnabled: adminEnabled,
+        publicOrderingEnabled,
+        digitalMenuEnabled,
         acceptCash: true,
         acceptPix: true,
         acceptCardOnDelivery: true,
@@ -254,6 +284,11 @@ export async function createManagedCompany(input: {
       },
     });
 
+    if (digitalMenuEnabled) {
+      await ensureDefaultDiningTables(tx, restaurant.id);
+      await ensureRestaurantDigitalMenuToken(tx, restaurant.id, null);
+    }
+
     return restaurant;
   });
 }
@@ -263,9 +298,15 @@ export async function updateManagedCompanyContract(input: {
   status: RestaurantContractStatus;
   endsAt?: string;
   notes?: string;
+  adminEnabled?: boolean;
+  publicOrderingEnabled?: boolean;
+  digitalMenuEnabled?: boolean;
 }) {
   const endsAt = input.endsAt?.trim() ?? "";
   const notes = input.notes?.trim() ?? "";
+  const adminEnabled = input.adminEnabled ?? true;
+  const publicOrderingEnabled = input.publicOrderingEnabled ?? true;
+  const digitalMenuEnabled = input.digitalMenuEnabled ?? false;
 
   const company = await prisma.restaurant.findUnique({
     where: { id: input.restaurantId },
@@ -284,6 +325,20 @@ export async function updateManagedCompanyContract(input: {
   };
 
   return prisma.$transaction(async (tx) => {
+    await tx.restaurant.update({
+      where: { id: company.id },
+      data: {
+        adminModuleEnabled: adminEnabled,
+        publicOrderingEnabled,
+        digitalMenuEnabled,
+      },
+    });
+
+    if (digitalMenuEnabled) {
+      await ensureDefaultDiningTables(tx, company.id);
+      await ensureRestaurantDigitalMenuToken(tx, company.id, null);
+    }
+
     const contract = await tx.restaurantContract.upsert({
       where: { restaurantId: company.id },
       update: data,

@@ -354,11 +354,11 @@ export default async function DevOwnerPage({
                               type="date"
                             />
                           </div>
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <input
-                              className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
-                              name="monthlyPrice"
-                              placeholder="monthly.price"
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <input
+                            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
+                            name="monthlyPrice"
+                            placeholder="monthly.price"
                             />
                             <select
                               className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none"
@@ -370,6 +370,25 @@ export default async function DevOwnerPage({
                               <option value="SUSPENDED">SUSPENDED</option>
                               <option value="CANCELED">CANCELED</option>
                             </select>
+                          </div>
+                        </div>
+                        <div className="rounded-[24px] border border-white/10 bg-black/80 p-4">
+                          <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">
+                            feature.access
+                          </p>
+                          <div className="mt-4 grid gap-3">
+                            <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                              <span>Gerencial</span>
+                              <input defaultChecked name="adminEnabled" type="checkbox" />
+                            </label>
+                            <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                              <span>App mobile</span>
+                              <input defaultChecked name="publicOrderingEnabled" type="checkbox" />
+                            </label>
+                            <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                              <span>Cardapio digital</span>
+                              <input name="digitalMenuEnabled" type="checkbox" />
+                            </label>
                           </div>
                         </div>
                         <textarea
@@ -468,6 +487,7 @@ export default async function DevOwnerPage({
                               <div className="text-xs leading-6 text-zinc-400">
                                 <p>orders={company._count.orders}</p>
                                 <p>products={company._count.products}</p>
+                                <p>digital={company.featureAccess.digitalMenuEnabled ? "on" : "off"}</p>
                               </div>
                             </div>
                           );
@@ -573,6 +593,32 @@ export default async function DevOwnerPage({
                                 name="endsAt"
                                 type="date"
                               />
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-3">
+                              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                                <span>Gerencial</span>
+                                <input
+                                  defaultChecked={company.featureAccess.adminEnabled}
+                                  name="adminEnabled"
+                                  type="checkbox"
+                                />
+                              </label>
+                              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                                <span>App mobile</span>
+                                <input
+                                  defaultChecked={company.featureAccess.publicOrderingEnabled}
+                                  name="publicOrderingEnabled"
+                                  type="checkbox"
+                                />
+                              </label>
+                              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                                <span>Cardapio digital</span>
+                                <input
+                                  defaultChecked={company.featureAccess.digitalMenuEnabled}
+                                  name="digitalMenuEnabled"
+                                  type="checkbox"
+                                />
+                              </label>
                             </div>
                             <textarea
                               className="min-h-24 w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"

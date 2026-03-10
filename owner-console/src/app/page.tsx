@@ -239,6 +239,25 @@ export default async function OwnerConsolePage() {
                     <option value="CANCELED">CANCELED</option>
                   </select>
                 </div>
+                <div className="rounded-[24px] border border-white/10 bg-black/80 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500">
+                    feature.access
+                  </p>
+                  <div className="mt-4 grid gap-3">
+                    <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                      <span>Gerencial</span>
+                      <input defaultChecked name="adminEnabled" type="checkbox" />
+                    </label>
+                    <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                      <span>App mobile</span>
+                      <input defaultChecked name="publicOrderingEnabled" type="checkbox" />
+                    </label>
+                    <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                      <span>Cardapio digital</span>
+                      <input name="digitalMenuEnabled" type="checkbox" />
+                    </label>
+                  </div>
+                </div>
                 <textarea
                   className="min-h-28 w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"
                   name="notes"
@@ -287,6 +306,15 @@ export default async function OwnerConsolePage() {
                                 <span>{needsSetup ? "awaiting_initial_setup" : "session_ready"}</span>
                                 <span>{formatDate(company.contract?.startsAt ?? company.createdAt)}</span>
                                 <span>{formatMoney(company.contract?.monthlyPrice ?? null)}</span>
+                                <span>
+                                  admin={company.featureAccess.adminEnabled ? "on" : "off"}
+                                </span>
+                                <span>
+                                  mobile={company.featureAccess.publicOrderingEnabled ? "on" : "off"}
+                                </span>
+                                <span>
+                                  digital={company.featureAccess.digitalMenuEnabled ? "on" : "off"}
+                                </span>
                               </div>
                             </div>
 
@@ -326,6 +354,32 @@ export default async function OwnerConsolePage() {
                                 name="endsAt"
                                 type="date"
                               />
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-3">
+                              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                                <span>Gerencial</span>
+                                <input
+                                  defaultChecked={company.featureAccess.adminEnabled}
+                                  name="adminEnabled"
+                                  type="checkbox"
+                                />
+                              </label>
+                              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                                <span>App mobile</span>
+                                <input
+                                  defaultChecked={company.featureAccess.publicOrderingEnabled}
+                                  name="publicOrderingEnabled"
+                                  type="checkbox"
+                                />
+                              </label>
+                              <label className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-zinc-300">
+                                <span>Cardapio digital</span>
+                                <input
+                                  defaultChecked={company.featureAccess.digitalMenuEnabled}
+                                  name="digitalMenuEnabled"
+                                  type="checkbox"
+                                />
+                              </label>
                             </div>
                             <textarea
                               className="min-h-24 w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600"

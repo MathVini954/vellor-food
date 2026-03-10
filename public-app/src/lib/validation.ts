@@ -20,7 +20,10 @@ export const orderPayloadSchema = z.object({
   customerPhone: z.string().trim().min(8, "Informe seu telefone."),
   customerAddress: z.string().trim().optional().nullable(),
   customerNeighborhood: z.string().trim().optional().nullable(),
-  orderType: z.enum(["DELIVERY", "PICKUP"]),
+  tableId: z.string().trim().optional().nullable(),
+  tableIdentifier: z.string().trim().optional().nullable(),
+  tableSessionId: z.string().trim().optional().nullable(),
+  orderType: z.enum(["DELIVERY", "PICKUP", "DINE_IN"]),
   paymentMethod: z.enum(["CASH", "PIX", "CARD_ON_DELIVERY", "PAY_ON_PICKUP"]),
   notes: z.string().trim().max(500).optional().nullable(),
 });

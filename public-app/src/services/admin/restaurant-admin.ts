@@ -7,6 +7,7 @@ import {
   ProductAccessStatus,
   RestaurantContractStatus,
   SaaSProductCode,
+  TableSessionStatus,
 } from "@prisma/client";
 import { geocodeAddress } from "@/lib/geocoding";
 import { hashPassword, verifyPassword } from "@/lib/password";
@@ -20,6 +21,8 @@ import type {
   AdminBootstrapPayload,
   AdminCategoryOption,
   AdminCustomer,
+  AdminDiningTable,
+  AdminFeatureAccess,
   AdminInitialSetupPayload,
   AdminMenuProduct,
   AdminOffer,
@@ -28,7 +31,12 @@ import type {
   AdminOrderStatus,
   AdminRestaurantSettings,
   AdminSessionPayload,
+  AdminTableSession,
 } from "@/types/admin";
+import {
+  ensureDefaultDiningTables,
+  ensureRestaurantDigitalMenuToken,
+} from "@/services/food/dining-room";
 
 const PLATFORM_NAME = "MesaPilot Gestao";
 
@@ -102,6 +110,61 @@ function formatTime(date: Date) {
     hour12: false,
     timeZone: "America/Sao_Paulo",
   }).format(date);
+}
+
+function getOrderTypeLabel(orderType: "DELIVERY" | "PICKUP" | "DINE_IN") {
+  if (orderType === "DELIVERY") {
+    return "Entrega";
+  }
+
+  if (orderType === "PICKUP") {
+    return "Retirada";
+  }
+
+  return "Mesa";
+}
+
+function getPaymentMethodLabel(
+  paymentMethod: "CASH" | "PIX" | "CARD_ON_DELIVERY" | "PAY_ON_PICKUP",
+  orderType: "DELIVERY" | "PICKUP" | "DINE_IN",
+) {
+  if (orderType === "DINE_IN" && paymentMethod === "PAY_ON_PICKUP") {
+    return "Pagamento no caixa";
+  }
+
+  const labels = {
+    CASH: "Dinheiro",
+    PIX: "Pix",
+    CARD_ON_DELIVERY: "Cartao na entrega",
+    PAY_ON_PICKUP: "Pagar na retirada",
+  } as const;
+
+  return labels[paymentMethod];
+}
+
+function mapTableSessionStatus(status: TableSessionStatus): AdminTableSession["status"] {
+  const labels: Record<TableSessionStatus, AdminTableSession["status"]> = {
+    OPEN: "Aberta",
+    CLOSED: "Encerrada",
+    MERGED: "Mesclada",
+    CANCELED: "Cancelada",
+  };
+
+  return labels[status];
+}
+
+function buildDigitalMenuUrl(token: string | null) {
+  if (!token) {
+    return null;
+  }
+
+  const baseUrl = process.env.PUBLIC_APP_BASE_URL?.trim() || process.env.NEXT_PUBLIC_APP_BASE_URL?.trim();
+
+  if (!baseUrl) {
+    return `/cardapio/${token}`;
+  }
+
+  return `${baseUrl.replace(/\/$/, "")}/cardapio/${token}`;
 }
 
 export function formatDateInput(date: Date) {
@@ -337,6 +400,7 @@ export async function findRestaurantForAdminLogin(email: string, password: strin
             select: {
               slug: true,
               name: true,
+              adminModuleEnabled: true,
               adminUserName: true,
               adminEmail: true,
               adminPasswordTemporary: true,
@@ -425,6 +489,7 @@ export async function findRestaurantForAdminLogin(email: string, password: strin
       companyId: true,
       slug: true,
       name: true,
+      adminModuleEnabled: true,
       adminUserName: true,
       adminEmail: true,
       adminPassword: true,
@@ -457,9 +522,13 @@ export async function findRestaurantForAdminLogin(email: string, password: strin
     return null;
   }
 
-  if (!canRestaurantAccessAdmin(restaurant.contract)) {
-    throw new Error("Acesso da empresa indisponivel. Verifique o status do contrato.");
-  }
+      if (!canRestaurantAccessAdmin(restaurant.contract)) {
+        throw new Error("Acesso da empresa indisponivel. Verifique o status do contrato.");
+      }
+
+      if (!restaurant.adminModuleEnabled) {
+        throw new Error("O pacote gerencial desta empresa esta desativado.");
+      }
 
   const userName = restaurant.adminUserName ?? "Gerente";
   const passwordHash =
@@ -586,6 +655,7 @@ export async function completeRestaurantInitialSetup(input: {
     },
     select: {
       slug: true,
+      adminModuleEnabled: true,
       adminEmail: true,
       adminUserName: true,
       adminPasswordTemporary: true,
@@ -610,6 +680,14 @@ export async function completeRestaurantInitialSetup(input: {
 
   if (!canRestaurantAccessAdmin(restaurant.contract)) {
     throw new Error("Acesso da empresa indisponivel. Verifique o status do contrato.");
+  }
+
+  if (!restaurant.adminModuleEnabled) {
+    throw new Error("O pacote gerencial desta empresa esta desativado.");
+  }
+
+  if (!restaurant.adminModuleEnabled) {
+    throw new Error("O pacote gerencial desta empresa esta desativado.");
   }
 
   const geocodedPoint = await geocodeAddress([address, city, state, "Brasil"]);
@@ -691,24 +769,147 @@ function mapOrder(order: {
   customerPhone: string;
   customerAddress: string | null;
   customerNeighborhood: string | null;
+  orderType: "DELIVERY" | "PICKUP" | "DINE_IN";
+  paymentMethod: "CASH" | "PIX" | "CARD_ON_DELIVERY" | "PAY_ON_PICKUP";
+  notes: string | null;
   total: Prisma.Decimal | number;
   status: OrderStatus;
   createdAt: Date;
-  items: Array<{ productName: string; quantity: number }>;
+  tableSession: {
+    id: string;
+    diningTable: {
+      label: string;
+    };
+  } | null;
+  items: Array<{ productName: string; quantity: number; customizations?: string | null }>;
 }): AdminOrder {
+  const isTableOrder = order.orderType === "DINE_IN";
+
   return {
     id: order.id,
     customer: order.customerName,
     phone: order.customerPhone,
     items: order.items.map((item) => ({
-      name: item.productName,
+      name: item.customizations ? `${item.productName} (${item.customizations})` : item.productName,
       quantity: item.quantity,
     })),
     total: formatCurrency(decimalToNumber(order.total)),
     status: mapDbOrderStatusToAdmin(order.status),
     time: formatTime(order.createdAt),
     createdAt: order.createdAt.toISOString(),
-    address: order.customerAddress || order.customerNeighborhood || "Endereco nao informado",
+    address: isTableOrder
+      ? order.tableSession?.diningTable.label ?? "Mesa nao informada"
+      : order.customerAddress || order.customerNeighborhood || "Endereco nao informado",
+    channel: isTableOrder ? "TABLE" : "ONLINE",
+    channelLabel: isTableOrder ? "Mesa" : "Online",
+    orderTypeLabel: getOrderTypeLabel(order.orderType),
+    paymentMethodLabel: getPaymentMethodLabel(order.paymentMethod, order.orderType),
+    notes: order.notes,
+    tableLabel: order.tableSession?.diningTable.label ?? null,
+    tableSessionId: order.tableSession?.id ?? null,
+  };
+}
+
+function mapDiningTable(table: {
+  id: string;
+  identifier: string;
+  label: string;
+  area: string | null;
+  seats: number | null;
+  sortOrder: number;
+  isActive: boolean;
+  sessions: Array<{
+    id: string;
+    openedAt: Date;
+    orders: Array<{
+      total: Prisma.Decimal | number;
+      customerName: string;
+    }>;
+  }>;
+}): AdminDiningTable {
+  const openSession = table.sessions[0] ?? null;
+  const sessionOrders = openSession?.orders ?? [];
+
+  return {
+    id: table.id,
+    identifier: table.identifier,
+    label: table.label,
+    area: table.area ?? "",
+    seats: table.seats,
+    sortOrder: table.sortOrder,
+    isActive: table.isActive,
+    status: openSession ? "Ocupada" : "Livre",
+    total: formatCurrency(
+      sessionOrders.reduce((sum, order) => sum + decimalToNumber(order.total), 0),
+    ),
+    orderCount: sessionOrders.length,
+    customerCount: new Set(sessionOrders.map((order) => order.customerName)).size,
+    openedAt: openSession ? openSession.openedAt.toISOString() : null,
+    openSessionId: openSession?.id ?? null,
+  };
+}
+
+function mapTableSession(tableSession: {
+  id: string;
+  status: TableSessionStatus;
+  openedAt: Date;
+  closedAt: Date | null;
+  notes: string | null;
+  diningTable: {
+    id: string;
+    identifier: string;
+    label: string;
+  };
+  orders: Array<{
+    id: string;
+    customerName: string;
+    customerPhone: string;
+    customerAddress: string | null;
+    customerNeighborhood: string | null;
+    orderType: "DELIVERY" | "PICKUP" | "DINE_IN";
+    paymentMethod: "CASH" | "PIX" | "CARD_ON_DELIVERY" | "PAY_ON_PICKUP";
+    notes: string | null;
+    total: Prisma.Decimal | number;
+    status: OrderStatus;
+    createdAt: Date;
+    items: Array<{
+      productName: string;
+      quantity: number;
+      customizations: string | null;
+    }>;
+  }>;
+}): AdminTableSession {
+  const mappedOrders = tableSession.orders.map((order) =>
+    mapOrder({
+      ...order,
+      tableSession: {
+        id: tableSession.id,
+        diningTable: {
+          label: tableSession.diningTable.label,
+        },
+      },
+    }),
+  );
+
+  return {
+    id: tableSession.id,
+    tableId: tableSession.diningTable.id,
+    tableIdentifier: tableSession.diningTable.identifier,
+    tableLabel: tableSession.diningTable.label,
+    status: mapTableSessionStatus(tableSession.status),
+    openedAt: tableSession.openedAt.toISOString(),
+    closedAt: tableSession.closedAt ? tableSession.closedAt.toISOString() : null,
+    total: formatCurrency(
+      tableSession.orders.reduce((sum, order) => sum + decimalToNumber(order.total), 0),
+    ),
+    itemCount: tableSession.orders.reduce(
+      (sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+      0,
+    ),
+    customerCount: new Set(tableSession.orders.map((order) => order.customerName)).size,
+    notes: tableSession.notes,
+    customerNames: [...new Set(tableSession.orders.map((order) => order.customerName))],
+    orders: mappedOrders,
   };
 }
 
@@ -807,11 +1008,14 @@ function mapCustomer(customer: {
   };
 }
 
-function buildMetrics(orders: Array<{
+function buildMetrics(
+  orders: Array<{
   total: Prisma.Decimal | number;
   status: OrderStatus;
   createdAt: Date;
-}>) {
+}>,
+  openTablesCount: number,
+) {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date();
@@ -841,6 +1045,12 @@ function buildMetrics(orders: Array<{
       label: "Em preparo",
       value: String(todaysOrders.filter((order) => order.status === "PREPARING").length),
       change: "Operacao ativa",
+      trend: "neutral" as const,
+    },
+    {
+      label: "Mesas abertas",
+      value: String(openTablesCount),
+      change: "Comandas em andamento",
       trend: "neutral" as const,
     },
     {
@@ -907,16 +1117,57 @@ function mapSettings(restaurant: {
   };
 }
 
+function mapFeatureAccess(restaurant: {
+  adminModuleEnabled: boolean;
+  publicOrderingEnabled: boolean;
+  digitalMenuEnabled: boolean;
+  digitalMenuToken: string | null;
+}): AdminFeatureAccess {
+  return {
+    adminEnabled: restaurant.adminModuleEnabled,
+    publicOrderingEnabled: restaurant.publicOrderingEnabled,
+    digitalMenuEnabled: restaurant.digitalMenuEnabled,
+    digitalMenuUrl: restaurant.digitalMenuEnabled
+      ? buildDigitalMenuUrl(restaurant.digitalMenuToken)
+      : null,
+  };
+}
+
 export async function getAdminBootstrap(
   slug: string,
   currentUserEmail?: string,
 ): Promise<AdminBootstrapPayload | null> {
+  const restaurantIdentity = await prisma.restaurant.findUnique({
+    where: { slug },
+    select: {
+      id: true,
+      adminModuleEnabled: true,
+      digitalMenuToken: true,
+    },
+  });
+
+  if (!restaurantIdentity) {
+    return null;
+  }
+
+  await ensureRestaurantDigitalMenuToken(
+    prisma,
+    restaurantIdentity.id,
+    restaurantIdentity.digitalMenuToken,
+  );
+  await ensureDefaultDiningTables(prisma, restaurantIdentity.id);
+
   const restaurant = await prisma.restaurant.findUnique({
     where: { slug },
     select: {
+      id: true,
       slug: true,
       companyId: true,
       name: true,
+      adminModuleEnabled: true,
+      publicOrderingEnabled: true,
+      digitalMenuEnabled: true,
+      digitalMenuToken: true,
       adminUserName: true,
       adminEmail: true,
       logoUrl: true,
@@ -955,13 +1206,112 @@ export async function getAdminBootstrap(
           customerPhone: true,
           customerAddress: true,
           customerNeighborhood: true,
+          orderType: true,
+          paymentMethod: true,
+          notes: true,
           total: true,
           status: true,
           createdAt: true,
+          tableSession: {
+            select: {
+              id: true,
+              diningTable: {
+                select: {
+                  label: true,
+                },
+              },
+            },
+          },
           items: {
             select: {
               productName: true,
               quantity: true,
+              customizations: true,
+            },
+          },
+        },
+      },
+      diningTables: {
+        orderBy: [{ sortOrder: "asc" }, { label: "asc" }],
+        select: {
+          id: true,
+          identifier: true,
+          label: true,
+          area: true,
+          seats: true,
+          sortOrder: true,
+          isActive: true,
+          sessions: {
+            where: {
+              status: "OPEN",
+            },
+            orderBy: {
+              openedAt: "desc",
+            },
+            take: 1,
+            select: {
+              id: true,
+              openedAt: true,
+              orders: {
+                where: {
+                  orderType: "DINE_IN",
+                },
+                select: {
+                  total: true,
+                  customerName: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      tableSessions: {
+        where: {
+          status: {
+            in: ["OPEN", "CLOSED", "MERGED"],
+          },
+        },
+        orderBy: [{ openedAt: "desc" }],
+        take: 40,
+        select: {
+          id: true,
+          status: true,
+          openedAt: true,
+          closedAt: true,
+          notes: true,
+          diningTable: {
+            select: {
+              id: true,
+              identifier: true,
+              label: true,
+            },
+          },
+          orders: {
+            where: {
+              orderType: "DINE_IN",
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+            select: {
+              id: true,
+              customerName: true,
+              customerPhone: true,
+              customerAddress: true,
+              customerNeighborhood: true,
+              orderType: true,
+              paymentMethod: true,
+              notes: true,
+              total: true,
+              status: true,
+              createdAt: true,
+              items: {
+                select: {
+                  productName: true,
+                  quantity: true,
+                  customizations: true,
+                },
+              },
             },
           },
         },
@@ -1025,6 +1375,10 @@ export async function getAdminBootstrap(
     return null;
   }
 
+  if (!restaurant.adminModuleEnabled) {
+    throw new Error("O pacote gerencial desta empresa esta desativado.");
+  }
+
   const platformUser =
     restaurant.companyId && currentUserEmail
       ? await prisma.platformUser.findFirst({
@@ -1040,15 +1394,28 @@ export async function getAdminBootstrap(
         })
       : null;
 
+  const onlineOrders = restaurant.orders
+    .filter((order) => order.orderType !== "DINE_IN")
+    .map(mapOrder);
+  const tableOrders = restaurant.orders
+    .filter((order) => order.orderType === "DINE_IN")
+    .map(mapOrder);
+  const tableSessions = restaurant.tableSessions.map(mapTableSession);
+  const diningTables = restaurant.diningTables.map(mapDiningTable);
+
   return {
     session: mapRestaurantSession({
       ...restaurant,
       adminUserName: platformUser?.name ?? restaurant.adminUserName,
       adminEmail: platformUser?.email ?? restaurant.adminEmail,
     }),
-    metrics: buildMetrics(restaurant.orders),
+    metrics: buildMetrics(restaurant.orders, diningTables.filter((table) => table.status === "Ocupada").length),
     categories: restaurant.categories.map(mapCategory),
-    orders: restaurant.orders.map(mapOrder),
+    orders: onlineOrders,
+    tableOrders,
+    diningTables,
+    tableSessions,
+    featureAccess: mapFeatureAccess(restaurant),
     products: restaurant.products.map(mapProduct),
     offers: restaurant.offers.map(mapOffer),
     customers: restaurant.customers.map(mapCustomer),

@@ -28,6 +28,52 @@ export type AdminOrder = {
   time: string;
   createdAt: string;
   address: string;
+  channel: "ONLINE" | "TABLE";
+  channelLabel: string;
+  orderTypeLabel: string;
+  paymentMethodLabel: string;
+  notes: string | null;
+  tableLabel: string | null;
+  tableSessionId: string | null;
+};
+
+export type AdminDiningTable = {
+  id: string;
+  identifier: string;
+  label: string;
+  area: string;
+  seats: number | null;
+  sortOrder: number;
+  isActive: boolean;
+  status: "Livre" | "Ocupada";
+  total: string;
+  orderCount: number;
+  customerCount: number;
+  openedAt: string | null;
+  openSessionId: string | null;
+};
+
+export type AdminTableSession = {
+  id: string;
+  tableId: string;
+  tableIdentifier: string;
+  tableLabel: string;
+  status: "Aberta" | "Encerrada" | "Mesclada" | "Cancelada";
+  openedAt: string;
+  closedAt: string | null;
+  total: string;
+  itemCount: number;
+  customerCount: number;
+  notes: string | null;
+  customerNames: string[];
+  orders: AdminOrder[];
+};
+
+export type AdminFeatureAccess = {
+  adminEnabled: boolean;
+  publicOrderingEnabled: boolean;
+  digitalMenuEnabled: boolean;
+  digitalMenuUrl: string | null;
 };
 
 export type AdminMenuProductStatus = "Ativo" | "Inativo";
@@ -154,6 +200,10 @@ export type AdminBootstrapPayload = {
   metrics: AdminMetric[];
   categories: AdminCategoryOption[];
   orders: AdminOrder[];
+  tableOrders: AdminOrder[];
+  diningTables: AdminDiningTable[];
+  tableSessions: AdminTableSession[];
+  featureAccess: AdminFeatureAccess;
   products: AdminMenuProduct[];
   offers: AdminOffer[];
   customers: AdminCustomer[];

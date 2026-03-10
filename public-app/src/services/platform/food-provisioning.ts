@@ -1,5 +1,9 @@
 import { Prisma, SaaSProductCode } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import {
+  ensureDefaultDiningTables,
+  ensureRestaurantDigitalMenuToken,
+} from "@/services/food/dining-room";
 
 type FoodProvisioningOutput = {
   tenantId: string;
@@ -26,6 +30,11 @@ function buildAdminUrl(slug: string) {
 export async function provisionFoodCompany(input: {
   companyId: string;
   requestOrigin: string;
+  featureAccess?: {
+    adminEnabled: boolean;
+    publicOrderingEnabled: boolean;
+    digitalMenuEnabled: boolean;
+  };
 }): Promise<FoodProvisioningOutput> {
   const company = await prisma.company.findUnique({
     where: { id: input.companyId },
@@ -83,6 +92,10 @@ export async function provisionFoodCompany(input: {
           isOpen: true,
           deliveryActive: true,
           pickupActive: true,
+          adminModuleEnabled: true,
+          publicOrderingEnabled: true,
+          digitalMenuEnabled: true,
+          digitalMenuToken: true,
         },
       },
     },
@@ -130,6 +143,12 @@ export async function provisionFoodCompany(input: {
     isOpen: currentRestaurant?.isOpen ?? false,
     deliveryActive: currentRestaurant?.deliveryActive ?? false,
     pickupActive: currentRestaurant?.pickupActive ?? false,
+    adminModuleEnabled: input.featureAccess?.adminEnabled ?? currentRestaurant?.adminModuleEnabled ?? true,
+    publicOrderingEnabled:
+      input.featureAccess?.publicOrderingEnabled ?? currentRestaurant?.publicOrderingEnabled ?? true,
+    digitalMenuEnabled:
+      input.featureAccess?.digitalMenuEnabled ?? currentRestaurant?.digitalMenuEnabled ?? false,
+    digitalMenuToken: currentRestaurant?.digitalMenuToken ?? null,
     acceptCash: true,
     acceptPix: true,
     acceptCardOnDelivery: true,
@@ -175,6 +194,16 @@ export async function provisionFoodCompany(input: {
       notes: productAccess.notes,
     },
   });
+
+  await ensureRestaurantDigitalMenuToken(
+    prisma,
+    restaurant.id,
+    currentRestaurant?.digitalMenuToken ?? null,
+  );
+
+  if (baseRestaurantData.digitalMenuEnabled) {
+    await ensureDefaultDiningTables(prisma, restaurant.id);
+  }
 
   return {
     tenantId: restaurant.id,

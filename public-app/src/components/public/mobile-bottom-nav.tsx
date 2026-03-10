@@ -34,7 +34,7 @@ const items = [
 ] as const;
 
 export function MobileBottomNav({ slug, activeTab }: MobileBottomNavProps) {
-  const { itemCount, customer } = useRestaurantStore();
+  const { experienceMode, itemCount, customer, tableSession } = useRestaurantStore();
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center">
@@ -48,9 +48,13 @@ export function MobileBottomNav({ slug, activeTab }: MobileBottomNavProps) {
                 ? `/r/${slug}/menu`
                 : item.id === "cart"
                   ? `/r/${slug}/checkout`
-                  : customer
-                    ? `/r/${slug}/meus-pedidos`
-                    : `/r/${slug}/identificacao`;
+                  : experienceMode === "DINE_IN"
+                    ? tableSession
+                      ? `/r/${slug}/meus-pedidos`
+                      : `/r/${slug}/checkout`
+                    : customer
+                      ? `/r/${slug}/meus-pedidos`
+                      : `/r/${slug}/identificacao`;
 
           return (
             <Link
