@@ -253,6 +253,7 @@ export function TablesManagementPage({
       activeSection="Mesas"
       restaurantName={restaurantName}
       userName={userName}
+      featureAccess={featureAccess}
       pageTitle="Gestao de mesas"
       pageSubtitle="Controle de comanda presencial, link fixo do cardapio digital e distribuicao das mesas."
       onLogout={onLogout}

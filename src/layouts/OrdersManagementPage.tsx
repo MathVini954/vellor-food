@@ -3,11 +3,12 @@ import { AdminShell } from "../components/AdminShell";
 import { DateField } from "../components/DateField";
 import { OrderDetailsPanel } from "../components/OrderDetailsPanel";
 import { OrdersManagementTable } from "../components/OrdersManagementTable";
-import type { AdminSection, Order, OrderStatus } from "../types/dashboard";
+import type { AdminSection, FeatureAccess, Order, OrderStatus } from "../types/dashboard";
 
 type OrdersManagementPageProps = {
   restaurantName: string;
   userName: string;
+  featureAccess: FeatureAccess;
   initialOrders: Order[];
   onLogout: () => void;
   onNavigate: (item: AdminSection) => void;
@@ -79,6 +80,7 @@ function formatDateLabel(value: string) {
 export function OrdersManagementPage({
   restaurantName,
   userName,
+  featureAccess,
   initialOrders,
   onLogout,
   onNavigate,
@@ -236,6 +238,7 @@ export function OrdersManagementPage({
       activeSection="PedidosOnline"
       restaurantName={restaurantName}
       userName={userName}
+      featureAccess={featureAccess}
       pageTitle="Pedidos online"
       pageSubtitle="Monitore delivery e retirada em tempo real, avance status e filtre historico por periodo."
       onLogout={onLogout}

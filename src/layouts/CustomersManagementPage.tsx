@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { AdminShell } from "../components/AdminShell";
 import { CustomerDetailsPanel } from "../components/CustomerDetailsPanel";
 import { CustomersTable } from "../components/CustomersTable";
-import type { AdminSection, Customer } from "../types/dashboard";
+import type { AdminSection, Customer, FeatureAccess } from "../types/dashboard";
 
 type CustomersManagementPageProps = {
   restaurantName: string;
   userName: string;
+  featureAccess: FeatureAccess;
   initialCustomers: Customer[];
   onLogout: () => void;
   onNavigate: (item: AdminSection) => void;
@@ -16,6 +17,7 @@ type CustomersManagementPageProps = {
 export function CustomersManagementPage({
   restaurantName,
   userName,
+  featureAccess,
   initialCustomers,
   onLogout,
   onNavigate,
@@ -92,6 +94,7 @@ export function CustomersManagementPage({
       activeSection="Clientes"
       restaurantName={restaurantName}
       userName={userName}
+      featureAccess={featureAccess}
       pageTitle="Clientes"
       pageSubtitle="Consulte a base que nasce no mobile e acompanhe historico, recorrencia e bloqueios."
       onLogout={onLogout}

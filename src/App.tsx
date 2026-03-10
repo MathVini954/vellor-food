@@ -432,6 +432,20 @@ export default function App() {
     };
   }, [session?.restaurantSlug]);
 
+  useEffect(() => {
+    if (!session || !bootstrap) {
+      return;
+    }
+
+    const currentSection = getSectionFromPath(pathname)?.section ?? "Dashboard";
+
+    if (currentSection === "Mesas" && !bootstrap.featureAccess.digitalMenuEnabled) {
+      const dashboardPath = buildAdminRoute("Dashboard", session.restaurantSlug);
+      window.history.replaceState({}, "", dashboardPath);
+      setPathname(dashboardPath);
+    }
+  }, [bootstrap, pathname, session]);
+
   async function handleLogin(credentials: { email: string; password: string }) {
     try {
       const result = await loginAdmin(credentials);
@@ -758,6 +772,7 @@ export default function App() {
         <OrdersManagementPage
           restaurantName={restaurantName}
           userName={userName}
+          featureAccess={bootstrap.featureAccess}
           initialOrders={bootstrap.orders}
           onLogout={handleLogout}
           onNavigate={navigateToSection}
@@ -792,6 +807,7 @@ export default function App() {
         <MenuManagementPage
           restaurantName={restaurantName}
           userName={userName}
+          featureAccess={bootstrap.featureAccess}
           availableCategories={bootstrap.categories}
           initialProducts={bootstrap.products}
           onLogout={handleLogout}
@@ -807,6 +823,7 @@ export default function App() {
         <OffersManagementPage
           restaurantName={restaurantName}
           userName={userName}
+          featureAccess={bootstrap.featureAccess}
           availableProducts={bootstrap.products}
           availableCategories={bootstrap.categories}
           initialOffers={bootstrap.offers}
@@ -822,6 +839,7 @@ export default function App() {
         <CustomersManagementPage
           restaurantName={restaurantName}
           userName={userName}
+          featureAccess={bootstrap.featureAccess}
           initialCustomers={bootstrap.customers}
           onLogout={handleLogout}
           onNavigate={navigateToSection}
@@ -849,6 +867,7 @@ export default function App() {
         <HomeDashboardPage
           restaurantName={restaurantName}
           userName={userName}
+          featureAccess={bootstrap.featureAccess}
           metrics={bootstrap.metrics}
           orders={bootstrap.orders}
           onLogout={handleLogout}

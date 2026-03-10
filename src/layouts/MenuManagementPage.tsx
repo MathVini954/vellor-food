@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../components/AdminShell";
 import { MenuProductsGrid } from "../components/MenuProductsGrid";
 import { ProductModal } from "../components/ProductModal";
-import type { AdminSection, CategoryOption, MenuProduct } from "../types/dashboard";
+import type { AdminSection, CategoryOption, FeatureAccess, MenuProduct } from "../types/dashboard";
 
 type MenuManagementPageProps = {
   restaurantName: string;
   userName: string;
+  featureAccess: FeatureAccess;
   availableCategories: CategoryOption[];
   initialProducts: MenuProduct[];
   onLogout: () => void;
@@ -19,6 +20,7 @@ type MenuManagementPageProps = {
 export function MenuManagementPage({
   restaurantName,
   userName,
+  featureAccess,
   availableCategories,
   initialProducts,
   onLogout,
@@ -107,6 +109,7 @@ export function MenuManagementPage({
         activeSection="Cardapio"
         restaurantName={restaurantName}
         userName={userName}
+        featureAccess={featureAccess}
         pageTitle="Cardapio do restaurante"
         pageSubtitle="Gerencie catalogo, categorias e personalizacoes que abastecem o app do cliente."
         onLogout={onLogout}

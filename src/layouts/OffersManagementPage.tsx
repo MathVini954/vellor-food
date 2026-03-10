@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../components/AdminShell";
 import { OfferModal } from "../components/OfferModal";
 import { OffersList } from "../components/OffersList";
-import type { AdminSection, CategoryOption, MenuProduct, Offer } from "../types/dashboard";
+import type { AdminSection, CategoryOption, FeatureAccess, MenuProduct, Offer } from "../types/dashboard";
 
 type OffersManagementPageProps = {
   restaurantName: string;
   userName: string;
+  featureAccess: FeatureAccess;
   availableProducts: MenuProduct[];
   availableCategories: CategoryOption[];
   initialOffers: Offer[];
@@ -19,6 +20,7 @@ type OffersManagementPageProps = {
 export function OffersManagementPage({
   restaurantName,
   userName,
+  featureAccess,
   availableProducts,
   availableCategories,
   initialOffers,
@@ -71,6 +73,7 @@ export function OffersManagementPage({
         activeSection="Ofertas"
         restaurantName={restaurantName}
         userName={userName}
+        featureAccess={featureAccess}
         pageTitle="Ofertas e promocoes"
         pageSubtitle="Crie campanhas conectadas ao catalogo para abastecer os destaques do mobile."
         onLogout={onLogout}

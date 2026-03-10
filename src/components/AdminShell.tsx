@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
-import type { AdminSection } from "../types/dashboard";
+import type { AdminSection, FeatureAccess } from "../types/dashboard";
 
 type AdminShellProps = {
   activeSection: AdminSection;
@@ -11,6 +11,7 @@ type AdminShellProps = {
   pageSubtitle: string;
   onLogout: () => void;
   onNavigate: (item: AdminSection) => void;
+  featureAccess?: FeatureAccess;
   children: ReactNode;
   aside?: ReactNode;
   action?: ReactNode;
@@ -24,6 +25,7 @@ export function AdminShell({
   pageSubtitle,
   onLogout,
   onNavigate,
+  featureAccess,
   children,
   aside,
   action,
@@ -36,6 +38,7 @@ export function AdminShell({
             activeItem={activeSection}
             restaurantName={restaurantName}
             userName={userName}
+            featureAccess={featureAccess}
             onNavigate={onNavigate}
           />
         </div>

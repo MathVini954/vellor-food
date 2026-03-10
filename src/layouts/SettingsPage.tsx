@@ -948,6 +948,7 @@ export function SettingsPage({
       activeSection="Configuracoes"
       restaurantName={restaurantName}
       userName={userName}
+      featureAccess={featureAccess}
       pageTitle="Configuracoes do restaurante"
       pageSubtitle="Controle loja, operacao, pagamento, aparencia e a regra de entrega por distancia."
       onLogout={onLogout}

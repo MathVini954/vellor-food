@@ -1142,6 +1142,7 @@ export async function getAdminBootstrap(
     select: {
       id: true,
       adminModuleEnabled: true,
+      digitalMenuEnabled: true,
       digitalMenuToken: true,
     },
   });
@@ -1150,12 +1151,14 @@ export async function getAdminBootstrap(
     return null;
   }
 
-  await ensureRestaurantDigitalMenuToken(
-    prisma,
-    restaurantIdentity.id,
-    restaurantIdentity.digitalMenuToken,
-  );
-  await ensureDefaultDiningTables(prisma, restaurantIdentity.id);
+  if (restaurantIdentity.digitalMenuEnabled) {
+    await ensureRestaurantDigitalMenuToken(
+      prisma,
+      restaurantIdentity.id,
+      restaurantIdentity.digitalMenuToken,
+    );
+    await ensureDefaultDiningTables(prisma, restaurantIdentity.id);
+  }
 
   const restaurant = await prisma.restaurant.findUnique({
     where: { slug },
@@ -1400,8 +1403,12 @@ export async function getAdminBootstrap(
   const tableOrders = restaurant.orders
     .filter((order) => order.orderType === "DINE_IN")
     .map(mapOrder);
-  const tableSessions = restaurant.tableSessions.map(mapTableSession);
-  const diningTables = restaurant.diningTables.map(mapDiningTable);
+  const tableSessions = restaurant.digitalMenuEnabled
+    ? restaurant.tableSessions.map(mapTableSession)
+    : [];
+  const diningTables = restaurant.digitalMenuEnabled
+    ? restaurant.diningTables.map(mapDiningTable)
+    : [];
 
   return {
     session: mapRestaurantSession({
@@ -1409,7 +1416,12 @@ export async function getAdminBootstrap(
       adminUserName: platformUser?.name ?? restaurant.adminUserName,
       adminEmail: platformUser?.email ?? restaurant.adminEmail,
     }),
-    metrics: buildMetrics(restaurant.orders, diningTables.filter((table) => table.status === "Ocupada").length),
+    metrics: buildMetrics(
+      restaurant.orders,
+      restaurant.digitalMenuEnabled
+        ? diningTables.filter((table) => table.status === "Ocupada").length
+        : 0,
+    ),
     categories: restaurant.categories.map(mapCategory),
     orders: onlineOrders,
     tableOrders,

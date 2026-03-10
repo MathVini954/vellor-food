@@ -1,9 +1,10 @@
 import { AdminShell } from "../components/AdminShell";
-import type { AdminSection, Metric, Order } from "../types/dashboard";
+import type { AdminSection, FeatureAccess, Metric, Order } from "../types/dashboard";
 
 type HomeDashboardPageProps = {
   restaurantName: string;
   userName: string;
+  featureAccess: FeatureAccess;
   metrics: Metric[];
   orders: Order[];
   onLogout: () => void;
@@ -51,18 +52,23 @@ const shortcutCards: Array<{
 export function HomeDashboardPage({
   restaurantName,
   userName,
+  featureAccess,
   metrics,
   orders,
   onLogout,
   onNavigate,
 }: HomeDashboardPageProps) {
   const recentOrders = orders.slice(0, 4);
+  const visibleShortcutCards = shortcutCards.filter((card) =>
+    card.route === "Mesas" ? featureAccess.digitalMenuEnabled : true,
+  );
 
   return (
     <AdminShell
       activeSection="Dashboard"
       restaurantName={restaurantName}
       userName={userName}
+      featureAccess={featureAccess}
       pageTitle="Central de gestao"
       pageSubtitle="Resumo executivo do restaurante, com acesso rapido para operacao, salao, catalogo e relacionamento."
       onLogout={onLogout}
@@ -134,7 +140,7 @@ export function HomeDashboardPage({
         </div>
 
         <div className="mt-5 grid gap-4 xl:grid-cols-2">
-          {shortcutCards.map((card) => (
+          {visibleShortcutCards.map((card) => (
             <button
               key={card.title}
               type="button"

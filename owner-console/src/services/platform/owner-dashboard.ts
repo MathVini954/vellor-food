@@ -8,6 +8,10 @@ import {
 } from "@prisma/client";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import {
+  ensureDefaultDiningTables,
+  ensureRestaurantDigitalMenuToken,
+} from "@/services/food/dining-room";
 import { runProvisioningJob } from "@/services/platform/provisioning";
 
 function slugifyCompanyName(value: string) {
@@ -374,6 +378,7 @@ export async function updateManagedCompanyContract(input: {
       restaurants: {
         select: {
           id: true,
+          digitalMenuToken: true,
         },
       },
     },
@@ -437,6 +442,11 @@ export async function updateManagedCompanyContract(input: {
           notes: notes || null,
         },
       });
+
+      if (digitalMenuEnabled) {
+        await ensureDefaultDiningTables(tx, foodTenant.id);
+        await ensureRestaurantDigitalMenuToken(tx, foodTenant.id, foodTenant.digitalMenuToken);
+      }
     }
   });
 

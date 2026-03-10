@@ -1,4 +1,4 @@
-import type { AdminSection } from "../types/dashboard";
+import type { AdminSection, FeatureAccess } from "../types/dashboard";
 
 const navigationGroups: Array<{
   label: string;
@@ -27,6 +27,7 @@ type SidebarProps = {
   activeItem?: AdminSection;
   restaurantName: string;
   userName: string;
+  featureAccess?: FeatureAccess;
   onNavigate?: (item: AdminSection) => void;
 };
 
@@ -34,8 +35,16 @@ export function Sidebar({
   activeItem = "Dashboard",
   restaurantName,
   userName,
+  featureAccess,
   onNavigate,
 }: SidebarProps) {
+  const availableNavigationGroups = navigationGroups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) =>
+      item.section === "Mesas" ? featureAccess?.digitalMenuEnabled !== false : true,
+    ),
+  }));
+
   return (
     <aside className="flex h-full w-full flex-col bg-[#171b38] text-white">
       <div className="border-b border-white/10 px-4 py-4">
@@ -54,7 +63,7 @@ export function Sidebar({
 
       <div className="flex flex-1 flex-col justify-between px-3 py-4">
         <div className="space-y-4">
-          {navigationGroups.map((group) => (
+          {availableNavigationGroups.map((group) => (
             <div key={group.label}>
               <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                 {group.label}
