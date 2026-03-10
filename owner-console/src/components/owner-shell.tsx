@@ -42,7 +42,7 @@ export function OwnerShell({
           "radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 0, transparent 50%), linear-gradient(180deg, #111214 0%, #0a0a0b 32%, #050506 100%)",
       }}
     >
-      <div className="mx-auto grid min-h-screen max-w-[1600px] lg:grid-cols-[248px_1fr]">
+      <div className="grid min-h-screen w-full lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="border-r border-white/8 bg-black/30 px-5 py-6 backdrop-blur-2xl">
           <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
             <div className="flex items-center gap-2">
@@ -114,7 +114,7 @@ export function OwnerShell({
           </form>
         </aside>
 
-        <section className="px-5 py-6 lg:px-8">
+        <section className="px-5 py-6 lg:px-10">
           <header className="rounded-[32px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.26)] backdrop-blur-2xl">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-3xl">
