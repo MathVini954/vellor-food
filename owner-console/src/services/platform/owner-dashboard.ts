@@ -2,6 +2,7 @@ import {
   CompanyStatus,
   PlatformUserRole,
   Prisma,
+  ProvisioningJobStatus,
   ProductAccessStatus,
   RestaurantContractStatus,
   SaaSProductCode,
@@ -97,6 +98,72 @@ async function ensureProduct(tx: Prisma.TransactionClient, productCode: SaaSProd
   });
 }
 
+function getPublicAppBaseUrl() {
+  const explicitBaseUrl = process.env.PUBLIC_APP_BASE_URL?.trim();
+
+  if (explicitBaseUrl) {
+    return explicitBaseUrl.replace(/\/$/, "");
+  }
+
+  const provisioningUrl = process.env.FOOD_PROVISIONING_URL?.trim();
+
+  if (!provisioningUrl) {
+    return null;
+  }
+
+  try {
+    return new URL(provisioningUrl).origin.replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function getFoodAdminAppBaseUrl() {
+  return process.env.FOOD_ADMIN_APP_URL?.trim()?.replace(/\/$/, "") ?? null;
+}
+
+function buildPublicRestaurantUrl(slug: string) {
+  const baseUrl = getPublicAppBaseUrl();
+
+  if (!baseUrl) {
+    return null;
+  }
+
+  return `${baseUrl}/r/${slug}`;
+}
+
+function buildDigitalMenuUrl(token: string | null | undefined) {
+  if (!token) {
+    return null;
+  }
+
+  const baseUrl = getPublicAppBaseUrl();
+
+  if (!baseUrl) {
+    return null;
+  }
+
+  return `${baseUrl}/cardapio/${token}`;
+}
+
+function buildFoodAdminUrl(slug: string) {
+  const baseUrl = getFoodAdminAppBaseUrl();
+
+  if (!baseUrl) {
+    return null;
+  }
+
+  return `${baseUrl}/admin/${slug}/dashboard`;
+}
+
+function buildQrCodeUrl(value: string | null) {
+  if (!value) {
+    return null;
+  }
+
+  return `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(value)}`;
+}
+
 export type ManagedCompanyRecord = {
   id: string;
   companyId: string;
@@ -130,9 +197,122 @@ export type ManagedCompanyRecord = {
     publicOrderingEnabled: boolean;
     digitalMenuEnabled: boolean;
   };
+  links: {
+    publicUrl: string | null;
+    adminUrl: string | null;
+    digitalMenuUrl: string | null;
+    digitalMenuQrCodeUrl: string | null;
+  };
+  lastProvisioningJob: {
+    id: string;
+    status: ProvisioningJobStatus;
+    createdAt: Date;
+    finishedAt: Date | null;
+    errorMessage: string | null;
+  } | null;
 };
 
-export async function listManagedCompanies() {
+export type ManagedProvisioningJobRecord = {
+  id: string;
+  companyId: string;
+  companyName: string;
+  companySlug: string;
+  productCode: SaaSProductCode;
+  productName: string;
+  status: ProvisioningJobStatus;
+  requestedByEmail: string | null;
+  createdAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  errorMessage: string | null;
+};
+
+export type ManagedCompanyDetail = {
+  id: string;
+  companyId: string;
+  foodTenantId: string | null;
+  name: string;
+  slug: string;
+  legalName: string | null;
+  status: CompanyStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  primaryContactName: string | null;
+  primaryContactEmail: string | null;
+  primaryContactPhone: string | null;
+  adminUser: {
+    id: string;
+    name: string;
+    email: string;
+    mustChangePassword: boolean;
+    isActive: boolean;
+    lastLoginAt: Date | null;
+  } | null;
+  contract: {
+    status: RestaurantContractStatus;
+    startsAt: Date;
+    endsAt: Date | null;
+    canceledAt: Date | null;
+    monthlyPrice: Prisma.Decimal | null;
+    notes: string | null;
+  } | null;
+  featureAccess: {
+    adminEnabled: boolean;
+    publicOrderingEnabled: boolean;
+    digitalMenuEnabled: boolean;
+  };
+  links: {
+    publicUrl: string | null;
+    adminUrl: string | null;
+    digitalMenuUrl: string | null;
+    digitalMenuQrCodeUrl: string | null;
+  };
+  restaurant: {
+    id: string;
+    name: string;
+    slug: string;
+    whatsapp: string;
+    adminEmail: string | null;
+    adminUserName: string | null;
+    adminPasswordTemporary: boolean;
+    onboardingCompleted: boolean;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    logoUrl: string | null;
+    bannerUrl: string | null;
+    isOpen: boolean;
+    deliveryActive: boolean;
+    pickupActive: boolean;
+    counts: {
+      categories: number;
+      products: number;
+      orders: number;
+      customers: number;
+      offers: number;
+      diningTables: number;
+      openTableSessions: number;
+    };
+    totals: {
+      grossRevenue: Prisma.Decimal | null;
+      paidRevenue: Prisma.Decimal | null;
+      last30DaysOrders: number;
+    };
+    recentOrders: Array<{
+      id: string;
+      customerName: string;
+      total: Prisma.Decimal;
+      status: string;
+      orderType: string;
+      paymentStatus: string;
+      createdAt: Date;
+      tableSessionId: string | null;
+    }>;
+  } | null;
+  provisioningJobs: ManagedProvisioningJobRecord[];
+};
+
+export async function listManagedCompanies(query?: string) {
   const companies = await prisma.company.findMany({
     orderBy: [{ createdAt: "desc" }],
     select: {
@@ -157,6 +337,17 @@ export async function listManagedCompanies() {
           },
         },
       },
+      provisioningJobs: {
+        orderBy: [{ createdAt: "desc" }],
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          finishedAt: true,
+          errorMessage: true,
+        },
+      },
       platformUsers: {
         where: {
           role: PlatformUserRole.COMPANY_ADMIN,
@@ -174,11 +365,13 @@ export async function listManagedCompanies() {
         take: 1,
         select: {
           id: true,
+          slug: true,
           adminPasswordTemporary: true,
           onboardingCompleted: true,
           adminModuleEnabled: true,
           publicOrderingEnabled: true,
           digitalMenuEnabled: true,
+          digitalMenuToken: true,
           city: true,
           state: true,
           _count: {
@@ -193,10 +386,29 @@ export async function listManagedCompanies() {
     },
   });
 
-  return companies.map((company) => {
+  const normalizedQuery = query?.trim().toLowerCase() ?? "";
+
+  return companies
+    .filter((company) => {
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const companyAdmin = company.platformUsers[0] ?? null;
+
+      return [
+        company.name,
+        company.slug,
+        company.primaryContactPhone ?? "",
+        companyAdmin?.email ?? "",
+        companyAdmin?.name ?? "",
+      ].some((value) => value.toLowerCase().includes(normalizedQuery));
+    })
+    .map((company) => {
     const productAccess = company.productAccesses[0] ?? null;
     const companyAdmin = company.platformUsers[0] ?? null;
     const foodTenant = company.restaurants[0] ?? null;
+    const digitalMenuUrl = buildDigitalMenuUrl(foodTenant?.digitalMenuToken);
 
     return {
       id: company.id,
@@ -233,8 +445,341 @@ export async function listManagedCompanies() {
         publicOrderingEnabled: foodTenant?.publicOrderingEnabled ?? true,
         digitalMenuEnabled: foodTenant?.digitalMenuEnabled ?? false,
       },
+      links: {
+        publicUrl: foodTenant ? buildPublicRestaurantUrl(foodTenant.slug ?? company.slug) : null,
+        adminUrl: foodTenant ? buildFoodAdminUrl(foodTenant.slug ?? company.slug) : null,
+        digitalMenuUrl,
+        digitalMenuQrCodeUrl: buildQrCodeUrl(digitalMenuUrl),
+      },
+      lastProvisioningJob: company.provisioningJobs[0] ?? null,
     } satisfies ManagedCompanyRecord;
+    });
+}
+
+export async function listRecentProvisioningJobs(limit = 10) {
+  const jobs = await prisma.provisioningJob.findMany({
+    orderBy: [{ createdAt: "desc" }],
+    take: limit,
+    select: {
+      id: true,
+      status: true,
+      requestedByEmail: true,
+      createdAt: true,
+      startedAt: true,
+      finishedAt: true,
+      errorMessage: true,
+      product: {
+        select: {
+          code: true,
+          name: true,
+        },
+      },
+      company: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
   });
+
+  return jobs.map((job) => ({
+    id: job.id,
+    companyId: job.company.id,
+    companyName: job.company.name,
+    companySlug: job.company.slug,
+    productCode: job.product.code,
+    productName: job.product.name,
+    status: job.status,
+    requestedByEmail: job.requestedByEmail,
+    createdAt: job.createdAt,
+    startedAt: job.startedAt,
+    finishedAt: job.finishedAt,
+    errorMessage: job.errorMessage,
+  })) satisfies ManagedProvisioningJobRecord[];
+}
+
+export async function getManagedCompanyDetail(companyId: string) {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      legalName: true,
+      status: true,
+      primaryContactName: true,
+      primaryContactEmail: true,
+      primaryContactPhone: true,
+      createdAt: true,
+      updatedAt: true,
+      productAccesses: {
+        where: {
+          product: {
+            code: SaaSProductCode.FOOD,
+          },
+        },
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
+        select: {
+          status: true,
+          contractStartsAt: true,
+          contractEndsAt: true,
+          monthlyPrice: true,
+          notes: true,
+        },
+      },
+      platformUsers: {
+        where: {
+          role: PlatformUserRole.COMPANY_ADMIN,
+        },
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          mustChangePassword: true,
+          isActive: true,
+          lastLoginAt: true,
+        },
+      },
+      provisioningJobs: {
+        orderBy: [{ createdAt: "desc" }],
+        take: 10,
+        select: {
+          id: true,
+          status: true,
+          requestedByEmail: true,
+          createdAt: true,
+          startedAt: true,
+          finishedAt: true,
+          errorMessage: true,
+          product: {
+            select: {
+              code: true,
+              name: true,
+            },
+          },
+          company: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      },
+      restaurants: {
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          whatsapp: true,
+          adminEmail: true,
+          adminUserName: true,
+          adminPasswordTemporary: true,
+          onboardingCompleted: true,
+          address: true,
+          city: true,
+          state: true,
+          logoUrl: true,
+          bannerUrl: true,
+          isOpen: true,
+          deliveryActive: true,
+          pickupActive: true,
+          adminModuleEnabled: true,
+          publicOrderingEnabled: true,
+          digitalMenuEnabled: true,
+          digitalMenuToken: true,
+          _count: {
+            select: {
+              categories: true,
+              products: true,
+              orders: true,
+              customers: true,
+              offers: true,
+              diningTables: true,
+            },
+          },
+          orders: {
+            orderBy: [{ createdAt: "desc" }],
+            take: 6,
+            select: {
+              id: true,
+              customerName: true,
+              total: true,
+              status: true,
+              orderType: true,
+              paymentStatus: true,
+              createdAt: true,
+              tableSessionId: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!company) {
+    return null;
+  }
+
+  const foodTenant = company.restaurants[0] ?? null;
+  const contract = company.productAccesses[0] ?? null;
+  const adminUser = company.platformUsers[0] ?? null;
+  const digitalMenuUrl = buildDigitalMenuUrl(foodTenant?.digitalMenuToken);
+
+  let restaurantCounts = {
+    openTableSessions: 0,
+    grossRevenue: null as Prisma.Decimal | null,
+    paidRevenue: null as Prisma.Decimal | null,
+    last30DaysOrders: 0,
+  };
+
+  if (foodTenant) {
+    const [openTableSessions, revenueAggregate, paidAggregate, last30DaysOrders] = await Promise.all([
+      prisma.tableSession.count({
+        where: {
+          restaurantId: foodTenant.id,
+          status: "OPEN",
+        },
+      }),
+      prisma.order.aggregate({
+        where: {
+          restaurantId: foodTenant.id,
+          status: {
+            not: "CANCELED",
+          },
+        },
+        _sum: {
+          total: true,
+        },
+      }),
+      prisma.order.aggregate({
+        where: {
+          restaurantId: foodTenant.id,
+          paymentStatus: "PAID",
+        },
+        _sum: {
+          total: true,
+        },
+      }),
+      prisma.order.count({
+        where: {
+          restaurantId: foodTenant.id,
+          createdAt: {
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          },
+        },
+      }),
+    ]);
+
+    restaurantCounts = {
+      openTableSessions,
+      grossRevenue: revenueAggregate._sum.total ?? null,
+      paidRevenue: paidAggregate._sum.total ?? null,
+      last30DaysOrders,
+    };
+  }
+
+  return {
+    id: company.id,
+    companyId: company.id,
+    foodTenantId: foodTenant?.id ?? null,
+    name: company.name,
+    slug: company.slug,
+    legalName: company.legalName,
+    status: company.status,
+    createdAt: company.createdAt,
+    updatedAt: company.updatedAt,
+    primaryContactName: company.primaryContactName,
+    primaryContactEmail: company.primaryContactEmail,
+    primaryContactPhone: company.primaryContactPhone,
+    adminUser,
+    contract: contract
+      ? {
+          status: toRestaurantContractStatus(contract.status),
+          startsAt: contract.contractStartsAt,
+          endsAt: contract.contractEndsAt,
+          canceledAt: contract.status === "CANCELED" ? contract.contractEndsAt : null,
+          monthlyPrice: contract.monthlyPrice,
+          notes: contract.notes,
+        }
+      : null,
+    featureAccess: {
+      adminEnabled: foodTenant?.adminModuleEnabled ?? true,
+      publicOrderingEnabled: foodTenant?.publicOrderingEnabled ?? true,
+      digitalMenuEnabled: foodTenant?.digitalMenuEnabled ?? false,
+    },
+    links: {
+      publicUrl: foodTenant ? buildPublicRestaurantUrl(foodTenant.slug) : null,
+      adminUrl: foodTenant ? buildFoodAdminUrl(foodTenant.slug) : null,
+      digitalMenuUrl,
+      digitalMenuQrCodeUrl: buildQrCodeUrl(digitalMenuUrl),
+    },
+    restaurant: foodTenant
+      ? {
+          id: foodTenant.id,
+          name: foodTenant.name,
+          slug: foodTenant.slug,
+          whatsapp: foodTenant.whatsapp,
+          adminEmail: foodTenant.adminEmail,
+          adminUserName: foodTenant.adminUserName,
+          adminPasswordTemporary: foodTenant.adminPasswordTemporary,
+          onboardingCompleted: foodTenant.onboardingCompleted,
+          address: foodTenant.address,
+          city: foodTenant.city,
+          state: foodTenant.state,
+          logoUrl: foodTenant.logoUrl,
+          bannerUrl: foodTenant.bannerUrl,
+          isOpen: foodTenant.isOpen,
+          deliveryActive: foodTenant.deliveryActive,
+          pickupActive: foodTenant.pickupActive,
+          counts: {
+            categories: foodTenant._count.categories,
+            products: foodTenant._count.products,
+            orders: foodTenant._count.orders,
+            customers: foodTenant._count.customers,
+            offers: foodTenant._count.offers,
+            diningTables: foodTenant._count.diningTables,
+            openTableSessions: restaurantCounts.openTableSessions,
+          },
+          totals: {
+            grossRevenue: restaurantCounts.grossRevenue,
+            paidRevenue: restaurantCounts.paidRevenue,
+            last30DaysOrders: restaurantCounts.last30DaysOrders,
+          },
+          recentOrders: foodTenant.orders.map((order) => ({
+            id: order.id,
+            customerName: order.customerName,
+            total: order.total,
+            status: order.status,
+            orderType: order.orderType,
+            paymentStatus: order.paymentStatus,
+            createdAt: order.createdAt,
+            tableSessionId: order.tableSessionId,
+          })),
+        }
+      : null,
+    provisioningJobs: company.provisioningJobs.map((job) => ({
+      id: job.id,
+      companyId: job.company.id,
+      companyName: job.company.name,
+      companySlug: job.company.slug,
+      productCode: job.product.code,
+      productName: job.product.name,
+      status: job.status,
+      requestedByEmail: job.requestedByEmail,
+      createdAt: job.createdAt,
+      startedAt: job.startedAt,
+      finishedAt: job.finishedAt,
+      errorMessage: job.errorMessage,
+    })),
+  } satisfies ManagedCompanyDetail;
 }
 
 export async function createManagedCompany(input: {
@@ -354,6 +899,7 @@ export async function updateManagedCompanyContract(input: {
   companyId: string;
   status: RestaurantContractStatus;
   endsAt?: string;
+  monthlyPrice?: string;
   notes?: string;
   productCode?: SaaSProductCode;
   adminEnabled?: boolean;
@@ -361,6 +907,7 @@ export async function updateManagedCompanyContract(input: {
   digitalMenuEnabled?: boolean;
 }) {
   const endsAt = input.endsAt?.trim() ?? "";
+  const monthlyPrice = input.monthlyPrice?.trim() ?? "";
   const notes = input.notes?.trim() ?? "";
   const productCode = input.productCode ?? "FOOD";
   const adminEnabled = input.adminEnabled ?? true;
@@ -427,6 +974,7 @@ export async function updateManagedCompanyContract(input: {
       data: {
         status: toProductAccessStatus(input.status),
         contractEndsAt,
+        monthlyPrice: monthlyPrice ? new Prisma.Decimal(parseDecimalInput(monthlyPrice)) : null,
         notes: notes || null,
       },
     });
@@ -449,6 +997,7 @@ export async function updateManagedCompanyContract(input: {
           status: input.status,
           endsAt: contractEndsAt,
           canceledAt: input.status === "CANCELED" ? new Date() : null,
+          monthlyPrice: monthlyPrice ? new Prisma.Decimal(parseDecimalInput(monthlyPrice)) : null,
           notes: notes || null,
         },
         create: {
@@ -457,6 +1006,7 @@ export async function updateManagedCompanyContract(input: {
           startsAt: new Date(),
           endsAt: contractEndsAt,
           canceledAt: input.status === "CANCELED" ? new Date() : null,
+          monthlyPrice: monthlyPrice ? new Prisma.Decimal(parseDecimalInput(monthlyPrice)) : null,
           notes: notes || null,
         },
       });
@@ -493,6 +1043,55 @@ export async function updateManagedCompanyContract(input: {
       );
     }
   }
+}
+
+export async function reprocessManagedCompanyProvisioning(input: {
+  companyId: string;
+  productCode?: SaaSProductCode;
+}) {
+  const productCode = input.productCode ?? "FOOD";
+  const company = await prisma.company.findUnique({
+    where: { id: input.companyId },
+    select: {
+      id: true,
+      platformUsers: {
+        where: {
+          role: PlatformUserRole.COMPANY_ADMIN,
+        },
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
+        select: {
+          email: true,
+        },
+      },
+      restaurants: {
+        orderBy: [{ createdAt: "asc" }],
+        take: 1,
+        select: {
+          adminModuleEnabled: true,
+          publicOrderingEnabled: true,
+          digitalMenuEnabled: true,
+        },
+      },
+    },
+  });
+
+  if (!company) {
+    throw new Error("Empresa nao encontrada.");
+  }
+
+  const foodTenant = company.restaurants[0] ?? null;
+
+  return runProvisioningJob({
+    companyId: company.id,
+    productCode,
+    requestedByEmail: company.platformUsers[0]?.email ?? null,
+    featureAccess: {
+      adminEnabled: foodTenant?.adminModuleEnabled ?? true,
+      publicOrderingEnabled: foodTenant?.publicOrderingEnabled ?? true,
+      digitalMenuEnabled: foodTenant?.digitalMenuEnabled ?? false,
+    },
+  });
 }
 
 export async function deleteManagedCompany(companyId: string) {

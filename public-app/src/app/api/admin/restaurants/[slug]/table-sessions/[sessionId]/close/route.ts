@@ -1,4 +1,4 @@
-import { TableSessionStatus } from "@prisma/client";
+import { PaymentStatus, TableSessionStatus } from "@prisma/client";
 import { requireAdminAccess } from "@/lib/admin-auth";
 import { adminJson, adminOptions } from "@/lib/admin-response";
 import { prisma } from "@/lib/prisma";
@@ -44,14 +44,30 @@ export async function POST(
       );
     }
 
-    await prisma.tableSession.update({
-      where: {
-        id: tableSession.id,
-      },
-      data: {
-        status: TableSessionStatus.CLOSED,
-        closedAt: new Date(),
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.order.updateMany({
+        where: {
+          tableSessionId: tableSession.id,
+          orderType: "DINE_IN",
+          status: {
+            not: "CANCELED",
+          },
+        },
+        data: {
+          paymentStatus: PaymentStatus.PAID,
+          status: "DELIVERED",
+        },
+      });
+
+      await tx.tableSession.update({
+        where: {
+          id: tableSession.id,
+        },
+        data: {
+          status: TableSessionStatus.CLOSED,
+          closedAt: new Date(),
+        },
+      });
     });
 
     return adminJson(request, { sessionId: tableSession.id, status: "CLOSED" });

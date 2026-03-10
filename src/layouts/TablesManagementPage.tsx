@@ -36,8 +36,8 @@ type TablesManagementPageProps = {
   onMergeSession: (sessionId: string, targetSessionId: string) => Promise<void>;
 };
 
-const nextStatusMap: Record<Exclude<OrderStatus, "Entregue" | "Cancelado">, OrderStatus> = {
-  Novo: "Aceito",
+const tableNextStatusMap: Record<Exclude<OrderStatus, "Entregue" | "Cancelado">, OrderStatus> = {
+  Novo: "Em preparo",
   Aceito: "Em preparo",
   "Em preparo": "Enviado",
   Enviado: "Entregue",
@@ -150,7 +150,7 @@ export function TablesManagementPage({
   }
 
   async function handleAdvanceOrder(order: Order) {
-    const nextStatus = nextStatusMap[order.status as keyof typeof nextStatusMap];
+    const nextStatus = tableNextStatusMap[order.status as keyof typeof tableNextStatusMap];
 
     if (!nextStatus) {
       return;
@@ -531,7 +531,8 @@ export function TablesManagementPage({
 
                     <div className="mt-5 space-y-4">
                       {selectedSession.orders.map((order) => {
-                        const primaryAction = nextStatusMap[order.status as keyof typeof nextStatusMap];
+                        const primaryAction =
+                          tableNextStatusMap[order.status as keyof typeof tableNextStatusMap];
                         const isFinalized = order.status === "Entregue" || order.status === "Cancelado";
                         const isPending = pendingActionId === order.id;
 
@@ -546,6 +547,9 @@ export function TablesManagementPage({
                                 <h4 className="mt-1 text-lg font-semibold text-slate-950">{order.customer}</h4>
                                 <p className="mt-2 text-sm text-slate-500">
                                   {order.paymentMethodLabel} • {order.time}
+                                </p>
+                                <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-emerald-600">
+                                  Pedido de mesa entra direto em producao
                                 </p>
                               </div>
                               <div className="flex items-center gap-3">
@@ -636,7 +640,7 @@ export function TablesManagementPage({
                     <section className="rounded-[24px] border border-slate-200 bg-[#fcfcfd] p-5">
                       <h4 className="text-sm font-semibold text-slate-950">Encerrar mesa</h4>
                       <p className="mt-2 text-sm leading-6 text-slate-500">
-                        Marca a comanda como encerrada apos o fechamento no caixa.
+                        Fecha a comanda no caixa, marca os pedidos da mesa como pagos e reconhece a receita.
                       </p>
                       <button
                         type="button"

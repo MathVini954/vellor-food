@@ -2,6 +2,7 @@ import {
   CompanyStatus,
   OfferType,
   OrderStatus,
+  PaymentStatus,
   PlatformUserRole,
   Prisma,
   ProductAccessStatus,
@@ -1012,6 +1013,8 @@ function buildMetrics(
   orders: Array<{
   total: Prisma.Decimal | number;
   status: OrderStatus;
+  orderType: "DELIVERY" | "PICKUP" | "DINE_IN";
+  paymentStatus: PaymentStatus;
   createdAt: Date;
 }>,
   openTablesCount: number,
@@ -1025,8 +1028,21 @@ function buildMetrics(
     (order) => order.createdAt >= startOfDay && order.createdAt <= endOfDay,
   );
   const revenue = todaysOrders
-    .filter((order) => order.status !== "CANCELED")
+    .filter((order) => {
+      if (order.status === "CANCELED") {
+        return false;
+      }
+
+      if (order.orderType === "DINE_IN") {
+        return order.paymentStatus === "PAID";
+      }
+
+      return true;
+    })
     .reduce((sum, order) => sum + decimalToNumber(order.total), 0);
+  const onlineNewOrders = todaysOrders.filter(
+    (order) => order.orderType !== "DINE_IN" && order.status === "NEW",
+  ).length;
 
   return [
     {
@@ -1036,9 +1052,9 @@ function buildMetrics(
       trend: "up" as const,
     },
     {
-      label: "Pedidos novos",
-      value: String(todaysOrders.filter((order) => order.status === "NEW").length),
-      change: "Aguardando aceite",
+      label: "Pedidos novos online",
+      value: String(onlineNewOrders),
+      change: "Aguardando aceite do delivery",
       trend: "neutral" as const,
     },
     {
@@ -1214,6 +1230,7 @@ export async function getAdminBootstrap(
           notes: true,
           total: true,
           status: true,
+          paymentStatus: true,
           createdAt: true,
           tableSession: {
             select: {

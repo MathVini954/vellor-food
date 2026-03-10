@@ -13,6 +13,7 @@ import {
 import {
   createManagedCompany,
   deleteManagedCompany,
+  reprocessManagedCompanyProvisioning,
   updateManagedCompanyContract,
 } from "@/services/platform/owner-dashboard";
 
@@ -39,13 +40,26 @@ export async function logoutOwnerAction() {
   redirect("/login");
 }
 
-function buildDashboardRedirect(params?: {
+function sanitizeRedirectPath(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim();
+
+  if (!normalized.startsWith("/")) {
+    return "/";
+  }
+
+  return normalized.split("#")[0].split("?")[0] || "/";
+}
+
+function buildConsoleRedirect(
+  basePath: string,
+  params?: {
   notice?: string;
   error?: string;
   companyId?: string;
   focus?: "create";
   hash?: string;
-}) {
+},
+) {
   const searchParams = new URLSearchParams();
 
   if (params?.notice) {
@@ -66,18 +80,24 @@ function buildDashboardRedirect(params?: {
 
   const query = searchParams.toString();
   const hash = params?.hash ? `#${params.hash}` : "";
-  return query ? `/?${query}${hash}` : `/${hash}`;
+  return query ? `${basePath}?${query}${hash}` : `${basePath}${hash}`;
 }
 
-function redirectDashboard(params?: {
+function redirectConsole(
+  basePath: string,
+  params?: {
   notice?: string;
   error?: string;
   companyId?: string;
   focus?: "create";
   hash?: string;
-}) {
+},
+) {
   revalidatePath("/");
-  redirect(buildDashboardRedirect(params));
+  if (basePath !== "/") {
+    revalidatePath(basePath);
+  }
+  redirect(buildConsoleRedirect(basePath, params));
 }
 
 function getActionErrorMessage(error: unknown, fallback: string) {
@@ -86,6 +106,7 @@ function getActionErrorMessage(error: unknown, fallback: string) {
 
 export async function createCompanyAction(formData: FormData) {
   await requireOwnerConsoleSession();
+  const redirectPath = sanitizeRedirectPath(formData.get("redirectTo")?.toString());
 
   try {
     await createManagedCompany({
@@ -105,14 +126,14 @@ export async function createCompanyAction(formData: FormData) {
       digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
     });
   } catch (error) {
-    redirectDashboard({
+    redirectConsole(redirectPath, {
       error: getActionErrorMessage(error, "Nao foi possivel provisionar a empresa."),
       focus: "create",
       hash: "create-company",
     });
   }
 
-  redirectDashboard({
+  redirectConsole(redirectPath, {
     notice: "company-created",
     focus: "create",
     hash: "create-company",
@@ -122,12 +143,15 @@ export async function createCompanyAction(formData: FormData) {
 export async function updateCompanyStatusAction(formData: FormData) {
   await requireOwnerConsoleSession();
   const companyId = String(formData.get("companyId") ?? "");
+  const redirectPath = sanitizeRedirectPath(formData.get("redirectTo")?.toString());
+  const hash = String(formData.get("hash") ?? "") || `company-${companyId}`;
 
   try {
     await updateManagedCompanyContract({
       companyId,
       status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
       endsAt: String(formData.get("endsAt") ?? ""),
+      monthlyPrice: String(formData.get("monthlyPrice") ?? ""),
       notes: String(formData.get("notes") ?? ""),
       productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
       adminEnabled: formData.get("adminEnabled") === "on",
@@ -135,33 +159,60 @@ export async function updateCompanyStatusAction(formData: FormData) {
       digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
     });
   } catch (error) {
-    redirectDashboard({
+    redirectConsole(redirectPath, {
       error: getActionErrorMessage(error, "Nao foi possivel aplicar o contrato."),
       companyId,
-      hash: `company-${companyId}`,
+      hash,
     });
   }
 
-  redirectDashboard({
-    notice: "contract-updated",
+  redirectConsole(redirectPath, {
+    notice: "tenant-reprocessed",
     companyId,
-    hash: `company-${companyId}`,
+    hash,
   });
 }
 
 export async function deleteCompanyAction(formData: FormData) {
   await requireOwnerConsoleSession();
   const companyId = String(formData.get("companyId") ?? "");
+  const redirectPath = sanitizeRedirectPath(formData.get("redirectTo")?.toString());
 
   try {
     await deleteManagedCompany(companyId);
   } catch (error) {
-    redirectDashboard({
+    redirectConsole(redirectPath, {
       error: getActionErrorMessage(error, "Nao foi possivel remover a empresa."),
     });
   }
 
-  redirectDashboard({
+  redirectConsole("/", {
     notice: "company-deleted",
+  });
+}
+
+export async function reprocessCompanyProvisionAction(formData: FormData) {
+  await requireOwnerConsoleSession();
+  const companyId = String(formData.get("companyId") ?? "");
+  const redirectPath = sanitizeRedirectPath(formData.get("redirectTo")?.toString());
+  const hash = String(formData.get("hash") ?? "") || `company-${companyId}`;
+
+  try {
+    await reprocessManagedCompanyProvisioning({
+      companyId,
+      productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
+    });
+  } catch (error) {
+    redirectConsole(redirectPath, {
+      error: getActionErrorMessage(error, "Nao foi possivel reprocessar o tenant."),
+      companyId,
+      hash,
+    });
+  }
+
+  redirectConsole(redirectPath, {
+    notice: "contract-updated",
+    companyId,
+    hash,
   });
 }

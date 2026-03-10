@@ -368,7 +368,7 @@ export async function POST(
           subtotal: new Prisma.Decimal(subtotal),
           deliveryFee: new Prisma.Decimal(deliveryFee),
           total: new Prisma.Decimal(total),
-          status: "NEW",
+          status: isDineInOrder ? "PREPARING" : "NEW",
           orderType: parsed.data.orderType,
           paymentMethod: parsed.data.paymentMethod,
           paymentStatus: PaymentStatus.PENDING,
