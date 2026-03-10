@@ -5,6 +5,7 @@ import {
   type CustomizationGroup,
   type ProductCustomizationConfig,
 } from "../lib/productCustomization";
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL, readImageFileAsDataUrl } from "../lib/imageUpload";
 
 function normalizeOptionPrice(value: unknown) {
   if (typeof value === "string") {
@@ -166,24 +167,23 @@ export function ProductModal({
     }
   }
 
-  function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    event.currentTarget.value = "";
 
     if (!file) {
       return;
     }
 
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const result = reader.result;
-
-      if (typeof result === "string") {
-        setForm((current) => ({ ...current, imageUrl: result }));
-      }
-    };
-
-    reader.readAsDataURL(file);
+    try {
+      const result = await readImageFileAsDataUrl(file, { maxBytes: MAX_IMAGE_UPLOAD_BYTES });
+      setForm((current) => ({ ...current, imageUrl: result }));
+      setSubmitError("");
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Nao foi possivel carregar a imagem do prato.",
+      );
+    }
   }
 
   function addAdditionalGroup() {
@@ -517,7 +517,7 @@ export function ProductModal({
                 onChange={handleImageUpload}
               />
               <p className="text-xs text-slate-500">
-                O upload agora salva a imagem no formato compativel com o app mobile.
+                O upload salva a imagem em formato compativel com o app mobile e aceita arquivos de ate {MAX_IMAGE_UPLOAD_LABEL}.
               </p>
             </label>
 

@@ -1,6 +1,7 @@
 import { requireAdminAccess } from "@/lib/admin-auth";
 import { Prisma } from "@prisma/client";
 import { adminJson, adminOptions } from "@/lib/admin-response";
+import { assertInlineAdminImageWithinLimit } from "@/lib/admin-inline-image";
 import { geocodeAddress } from "@/lib/geocoding";
 import { prisma } from "@/lib/prisma";
 import { parseCurrencyInput } from "@/services/admin/restaurant-admin";
@@ -40,10 +41,13 @@ export async function PUT(
     const restaurantAddress = String(settings.restaurant?.address ?? "").trim() || null;
     const restaurantCity = String(settings.restaurant?.city ?? "").trim() || null;
     const restaurantState = String(settings.restaurant?.state ?? "").trim().toUpperCase() || null;
+    const bannerUrl = String(settings.appearance?.banner ?? "").trim();
     const geocodedRestaurant =
       restaurantAddress && restaurantCity && restaurantState
         ? await geocodeAddress([restaurantAddress, restaurantCity, restaurantState, "Brasil"])
         : null;
+
+    assertInlineAdminImageWithinLimit(bannerUrl, "O banner");
 
     await prisma.$transaction(async (tx) => {
       await tx.restaurant.update({
@@ -76,7 +80,7 @@ export async function PUT(
           acceptCardOnDelivery: Boolean(settings.payment?.cardOnDelivery),
           primaryColor: String(settings.appearance?.primaryColor ?? "").trim() || null,
           secondaryColor: String(settings.appearance?.secondaryColor ?? "").trim() || null,
-          bannerUrl: String(settings.appearance?.banner ?? "").trim() || null,
+          bannerUrl: bannerUrl || null,
           welcomeMessage: String(settings.appearance?.welcomeMessage ?? "").trim() || null,
         },
       });

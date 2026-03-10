@@ -1,6 +1,7 @@
 import { requireAdminAccess } from "@/lib/admin-auth";
 import { Prisma } from "@prisma/client";
 import { adminJson, adminOptions } from "@/lib/admin-response";
+import { assertInlineAdminImageWithinLimit } from "@/lib/admin-inline-image";
 import { prisma } from "@/lib/prisma";
 import { parseCustomizationConfig } from "@/services/admin/product-customization";
 import { ensureCategoryForRestaurant, parseCurrencyInput } from "@/services/admin/restaurant-admin";
@@ -33,6 +34,8 @@ export async function POST(
     if (!name || !description || !price || !category || !imageUrl) {
       return adminJson(request, { error: "Preencha os campos obrigatorios do produto." }, { status: 400 });
     }
+
+    assertInlineAdminImageWithinLimit(imageUrl, "A imagem do prato");
 
     const restaurant = await prisma.restaurant.findUnique({
       where: { slug },

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AdminShell } from "../components/AdminShell";
 import { FormSelect } from "../components/FormSelect";
 import { IosToggle } from "../components/IosToggle";
+import { MAX_IMAGE_UPLOAD_BYTES, MAX_IMAGE_UPLOAD_LABEL, readImageFileAsDataUrl } from "../lib/imageUpload";
 import type { AdminSection, FeatureAccess, RestaurantSettings } from "../types/dashboard";
 
 type SettingsPageProps = {
@@ -138,7 +139,7 @@ export function SettingsPage({
     parseWorkingHours(initialSettings.operation.workingHours).restaurantStatus,
   );
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+  const [feedback, setFeedback] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const explicitPublicAppBaseUrl = (import.meta.env.VITE_PUBLIC_APP_BASE_URL as string | undefined)?.replace(/\/$/, "");
   const adminApiBaseUrl = (import.meta.env.VITE_ADMIN_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
   const derivedPublicAppBaseUrl = adminApiBaseUrl?.replace(/\/api\/admin$/, "");
@@ -160,41 +161,61 @@ export function SettingsPage({
     setRestaurantStatus(parsedWorkingHours.restaurantStatus);
   }, [initialSettings]);
 
+  function showFeedback(message: string, tone: "success" | "error" = "success") {
+    setFeedback({ tone, message });
+    window.setTimeout(() => {
+      setFeedback((current) => (current?.message === message ? null : current));
+    }, 2500);
+  }
+
   async function handleCopyLink(value: string, successMessage: string) {
     try {
       await navigator.clipboard.writeText(value);
-      setSaveMessage(successMessage);
+      showFeedback(successMessage, "success");
     } catch {
-      setSaveMessage("Nao foi possivel copiar o link.");
+      showFeedback("Nao foi possivel copiar o link.", "error");
     }
-
-    window.setTimeout(() => setSaveMessage(""), 2500);
   }
 
   async function handleImageFileSelection(
     file: File | null,
     onLoaded: (value: string) => void,
+    options?: {
+      maxBytes?: number;
+      errorMessage?: string;
+    },
   ) {
     if (!file) {
       return;
     }
 
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(new Error("Nao foi possivel ler o arquivo selecionado."));
-      reader.readAsDataURL(file);
-    });
-
-    onLoaded(dataUrl);
+    try {
+      const dataUrl = await readImageFileAsDataUrl(file, { maxBytes: options?.maxBytes });
+      onLoaded(dataUrl);
+    } catch (error) {
+      showFeedback(
+        error instanceof Error
+          ? error.message
+          : options?.errorMessage ?? "Nao foi possivel ler o arquivo selecionado.",
+        "error",
+      );
+    }
   }
 
   async function handleSave() {
     setIsSaving(true);
-    await onSaveSettings(settings);
-    setSaveMessage("Alteracoes salvas.");
-    window.setTimeout(() => setSaveMessage(""), 2500);
-    setIsSaving(false);
+
+    try {
+      await onSaveSettings(settings);
+      showFeedback("Alteracoes salvas.", "success");
+    } catch (error) {
+      showFeedback(
+        error instanceof Error ? error.message : "Nao foi possivel salvar as configuracoes.",
+        "error",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   function syncWorkingHours(
@@ -880,16 +901,77 @@ export function SettingsPage({
 
         <label className="space-y-2 lg:col-span-2">
           <span className="text-sm font-medium text-slate-700">Banner do site</span>
-          <input
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-orange-400 focus:bg-white"
-            value={settings.appearance.banner}
-            onChange={(event) =>
-              setSettings((current) => ({
-                ...current,
-                appearance: { ...current.appearance, banner: event.target.value },
-              }))
-            }
-          />
+          <div className="space-y-4 rounded-[28px] border border-slate-200 bg-slate-50 p-4">
+            <div className="flex h-40 items-center justify-center overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+              {settings.appearance.banner ? (
+                <img
+                  alt="Preview do banner"
+                  className="h-full w-full object-cover"
+                  src={settings.appearance.banner}
+                />
+              ) : (
+                <span className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
+                  Sem banner
+                </span>
+              )}
+            </div>
+
+            <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-orange-300 bg-white px-4 py-4 text-sm font-medium text-orange-700 transition hover:border-orange-400 hover:bg-orange-50">
+              <input
+                accept="image/*"
+                className="hidden"
+                type="file"
+                onChange={async (event) => {
+                  const [file] = Array.from(event.target.files ?? []);
+                  await handleImageFileSelection(
+                    file ?? null,
+                    (value) =>
+                      setSettings((current) => ({
+                        ...current,
+                        appearance: { ...current.appearance, banner: value },
+                      })),
+                    {
+                      maxBytes: MAX_IMAGE_UPLOAD_BYTES,
+                      errorMessage: "Nao foi possivel carregar o banner.",
+                    },
+                  );
+                  event.currentTarget.value = "";
+                }}
+              />
+              Selecionar arquivo do banner
+            </label>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-orange-400"
+                placeholder="Ou cole uma URL do banner"
+                value={settings.appearance.banner}
+                onChange={(event) =>
+                  setSettings((current) => ({
+                    ...current,
+                    appearance: { ...current.appearance, banner: event.target.value },
+                  }))
+                }
+              />
+              <button
+                className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100"
+                type="button"
+                onClick={() =>
+                  setSettings((current) => ({
+                    ...current,
+                    appearance: { ...current.appearance, banner: "" },
+                  }))
+                }
+              >
+                Remover
+              </button>
+            </div>
+
+            <p className="text-xs leading-5 text-slate-500">
+              Aceita upload de imagem de ate {MAX_IMAGE_UPLOAD_LABEL}. Voce tambem pode usar uma
+              URL publica do banner.
+            </p>
+          </div>
         </label>
 
         <label className="space-y-2 lg:col-span-2">
@@ -965,13 +1047,19 @@ export function SettingsPage({
       }
     >
       <section className="panel p-5 lg:p-6">
-        {saveMessage ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {saveMessage}
+        {feedback ? (
+          <div
+            className={`rounded-2xl px-4 py-3 text-sm ${
+              feedback.tone === "success"
+                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border border-rose-200 bg-rose-50 text-rose-700"
+            }`}
+          >
+            {feedback.message}
           </div>
         ) : null}
 
-        <div className={`${saveMessage ? "mt-5" : ""} flex flex-wrap gap-3 border-b border-slate-200 pb-5`}>
+        <div className={`${feedback ? "mt-5" : ""} flex flex-wrap gap-3 border-b border-slate-200 pb-5`}>
           {tabs.map((tab) => (
             <button
               key={tab}
