@@ -39,53 +39,129 @@ export async function logoutOwnerAction() {
   redirect("/login");
 }
 
-function refreshDashboard() {
+function buildDashboardRedirect(params?: {
+  notice?: string;
+  error?: string;
+  companyId?: string;
+  focus?: "create";
+  hash?: string;
+}) {
+  const searchParams = new URLSearchParams();
+
+  if (params?.notice) {
+    searchParams.set("notice", params.notice);
+  }
+
+  if (params?.error) {
+    searchParams.set("error", params.error);
+  }
+
+  if (params?.companyId) {
+    searchParams.set("companyId", params.companyId);
+  }
+
+  if (params?.focus) {
+    searchParams.set("focus", params.focus);
+  }
+
+  const query = searchParams.toString();
+  const hash = params?.hash ? `#${params.hash}` : "";
+  return query ? `/?${query}${hash}` : `/${hash}`;
+}
+
+function redirectDashboard(params?: {
+  notice?: string;
+  error?: string;
+  companyId?: string;
+  focus?: "create";
+  hash?: string;
+}) {
   revalidatePath("/");
-  redirect("/");
+  redirect(buildDashboardRedirect(params));
+}
+
+function getActionErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message.trim() ? error.message.trim() : fallback;
 }
 
 export async function createCompanyAction(formData: FormData) {
   await requireOwnerConsoleSession();
 
-  await createManagedCompany({
-    companyName: String(formData.get("companyName") ?? ""),
-    primaryContactPhone: String(formData.get("primaryContactPhone") ?? ""),
-    adminName: String(formData.get("adminName") ?? ""),
-    email: String(formData.get("email") ?? ""),
-    temporaryPassword: String(formData.get("temporaryPassword") ?? ""),
-    contractStartsAt: String(formData.get("contractStartsAt") ?? ""),
-    contractEndsAt: String(formData.get("contractEndsAt") ?? ""),
-    monthlyPrice: String(formData.get("monthlyPrice") ?? ""),
-    notes: String(formData.get("notes") ?? ""),
-    status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
-    productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
-    adminEnabled: formData.get("adminEnabled") === "on",
-    publicOrderingEnabled: formData.get("publicOrderingEnabled") === "on",
-    digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
-  });
+  try {
+    await createManagedCompany({
+      companyName: String(formData.get("companyName") ?? ""),
+      primaryContactPhone: String(formData.get("primaryContactPhone") ?? ""),
+      adminName: String(formData.get("adminName") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      temporaryPassword: String(formData.get("temporaryPassword") ?? ""),
+      contractStartsAt: String(formData.get("contractStartsAt") ?? ""),
+      contractEndsAt: String(formData.get("contractEndsAt") ?? ""),
+      monthlyPrice: String(formData.get("monthlyPrice") ?? ""),
+      notes: String(formData.get("notes") ?? ""),
+      status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
+      productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
+      adminEnabled: formData.get("adminEnabled") === "on",
+      publicOrderingEnabled: formData.get("publicOrderingEnabled") === "on",
+      digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
+    });
+  } catch (error) {
+    redirectDashboard({
+      error: getActionErrorMessage(error, "Nao foi possivel provisionar a empresa."),
+      focus: "create",
+      hash: "create-company",
+    });
+  }
 
-  refreshDashboard();
+  redirectDashboard({
+    notice: "company-created",
+    focus: "create",
+    hash: "create-company",
+  });
 }
 
 export async function updateCompanyStatusAction(formData: FormData) {
   await requireOwnerConsoleSession();
+  const companyId = String(formData.get("companyId") ?? "");
 
-  await updateManagedCompanyContract({
-    companyId: String(formData.get("companyId") ?? ""),
-    status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
-    endsAt: String(formData.get("endsAt") ?? ""),
-    notes: String(formData.get("notes") ?? ""),
-    productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
-    adminEnabled: formData.get("adminEnabled") === "on",
-    publicOrderingEnabled: formData.get("publicOrderingEnabled") === "on",
-    digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
+  try {
+    await updateManagedCompanyContract({
+      companyId,
+      status: String(formData.get("status") ?? "ACTIVE") as RestaurantContractStatus,
+      endsAt: String(formData.get("endsAt") ?? ""),
+      notes: String(formData.get("notes") ?? ""),
+      productCode: String(formData.get("productCode") ?? "FOOD") as SaaSProductCode,
+      adminEnabled: formData.get("adminEnabled") === "on",
+      publicOrderingEnabled: formData.get("publicOrderingEnabled") === "on",
+      digitalMenuEnabled: formData.get("digitalMenuEnabled") === "on",
+    });
+  } catch (error) {
+    redirectDashboard({
+      error: getActionErrorMessage(error, "Nao foi possivel aplicar o contrato."),
+      companyId,
+      hash: `company-${companyId}`,
+    });
+  }
+
+  redirectDashboard({
+    notice: "contract-updated",
+    companyId,
+    hash: `company-${companyId}`,
   });
-
-  refreshDashboard();
 }
 
 export async function deleteCompanyAction(formData: FormData) {
   await requireOwnerConsoleSession();
-  await deleteManagedCompany(String(formData.get("companyId") ?? ""));
-  refreshDashboard();
+  const companyId = String(formData.get("companyId") ?? "");
+
+  try {
+    await deleteManagedCompany(companyId);
+  } catch (error) {
+    redirectDashboard({
+      error: getActionErrorMessage(error, "Nao foi possivel remover a empresa."),
+    });
+  }
+
+  redirectDashboard({
+    notice: "company-deleted",
+  });
 }

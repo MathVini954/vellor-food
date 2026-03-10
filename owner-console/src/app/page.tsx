@@ -10,6 +10,7 @@ import {
   TerminalSquare,
   Trash2,
 } from "lucide-react";
+import { ActionSubmitButton } from "@/components/action-submit-button";
 import {
   createCompanyAction,
   deleteCompanyAction,
@@ -56,7 +57,63 @@ function formatMoney(value: { toNumber(): number } | null) {
   }).format(value.toNumber());
 }
 
-export default async function OwnerConsolePage() {
+function readSearchParam(
+  value: string | string[] | undefined,
+) {
+  if (Array.isArray(value)) {
+    return value[0] ?? "";
+  }
+
+  return value ?? "";
+}
+
+function resolveFeedback(searchParams: Record<string, string | string[] | undefined>) {
+  const notice = readSearchParam(searchParams.notice);
+  const error = readSearchParam(searchParams.error);
+  const companyId = readSearchParam(searchParams.companyId) || null;
+  const focus = readSearchParam(searchParams.focus);
+
+  if (error) {
+    return {
+      tone: "error" as const,
+      message: error,
+      scope: companyId ? ("company" as const) : focus === "create" ? ("create" as const) : ("global" as const),
+      companyId,
+    };
+  }
+
+  switch (notice) {
+    case "company-created":
+      return {
+        tone: "success" as const,
+        message: "Empresa provisionada com sucesso. O tenant ja esta pronto para o primeiro acesso.",
+        scope: "create" as const,
+        companyId: null,
+      };
+    case "contract-updated":
+      return {
+        tone: "success" as const,
+        message: "Contrato aplicado. Pacotes, status e liberacoes foram reprocessados.",
+        scope: "company" as const,
+        companyId,
+      };
+    case "company-deleted":
+      return {
+        tone: "success" as const,
+        message: "Empresa removida do registry central.",
+        scope: "global" as const,
+        companyId: null,
+      };
+    default:
+      return null;
+  }
+}
+
+export default async function OwnerConsolePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
   if (!hasOwnerConsoleCredentialsConfigured()) {
     redirect("/login?error=not-configured");
   }
@@ -65,6 +122,8 @@ export default async function OwnerConsolePage() {
     redirect("/login");
   }
 
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const feedback = resolveFeedback(resolvedSearchParams);
   const companies = await listManagedCompanies();
   const totalCompanies = companies.length;
   const activeCompanies = companies.filter((company) => company.contract?.status === "ACTIVE").length;
@@ -141,6 +200,19 @@ export default async function OwnerConsolePage() {
             </label>
           </header>
 
+          {feedback?.scope === "global" ? (
+            <div
+              aria-live="polite"
+              className={`rounded-[22px] border px-5 py-4 text-sm ${
+                feedback.tone === "success"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-100"
+              }`}
+            >
+              {feedback.message}
+            </div>
+          ) : null}
+
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-[24px] border border-white/10 bg-black/70 p-5">
               <div className="flex items-center gap-2 text-zinc-500">
@@ -169,10 +241,22 @@ export default async function OwnerConsolePage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[420px_1fr]">
-            <section className="rounded-[28px] border border-white/10 bg-black/70 p-5">
+            <section id="create-company" className="rounded-[28px] border border-white/10 bg-black/70 p-5">
               <p className="text-[11px] uppercase tracking-[0.34em] text-zinc-500">
                 provision.company()
               </p>
+              {feedback?.scope === "create" ? (
+                <div
+                  aria-live="polite"
+                  className={`mt-4 rounded-[20px] border px-4 py-3 text-sm ${
+                    feedback.tone === "success"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                      : "border-rose-500/30 bg-rose-500/10 text-rose-100"
+                  }`}
+                >
+                  {feedback.message}
+                </div>
+              ) : null}
               <form action={createCompanyAction} className="mt-5 space-y-4">
                 <input name="productCode" type="hidden" value="FOOD" />
                 <input
@@ -263,12 +347,12 @@ export default async function OwnerConsolePage() {
                   name="notes"
                   placeholder="// notes: contrato, plano, SLA, suporte"
                 />
-                <button
+                <ActionSubmitButton
                   className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white px-4 py-3 text-sm font-medium text-black transition hover:bg-zinc-200"
-                  type="submit"
+                  pendingLabel="provisioning.company()"
                 >
                   provision.company()
-                </button>
+                </ActionSubmitButton>
               </form>
             </section>
 
@@ -286,6 +370,7 @@ export default async function OwnerConsolePage() {
 
                       return (
                         <article
+                          id={`company-${company.companyId}`}
                           key={company.id}
                           className="rounded-[24px] border border-white/10 bg-black p-4"
                         >
@@ -320,19 +405,31 @@ export default async function OwnerConsolePage() {
 
                             <form action={deleteCompanyAction}>
                               <input name="companyId" type="hidden" value={company.companyId} />
-                              <button
+                              <ActionSubmitButton
                                 className="inline-flex items-center gap-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 transition hover:bg-rose-500/20"
-                                type="submit"
+                                pendingLabel="deleting.company()"
                               >
                                 <Trash2 size={15} />
                                 delete
-                              </button>
+                              </ActionSubmitButton>
                             </form>
                           </div>
 
                           <form action={updateCompanyStatusAction} className="mt-4 space-y-3">
                             <input name="companyId" type="hidden" value={company.companyId} />
                             <input name="productCode" type="hidden" value={company.productCode} />
+                            {feedback?.scope === "company" && feedback.companyId === company.companyId ? (
+                              <div
+                                aria-live="polite"
+                                className={`rounded-[20px] border px-4 py-3 text-sm ${
+                                  feedback.tone === "success"
+                                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+                                    : "border-rose-500/30 bg-rose-500/10 text-rose-100"
+                                }`}
+                              >
+                                {feedback.message}
+                              </div>
+                            ) : null}
                             <div className="grid gap-3 md:grid-cols-2">
                               <select
                                 className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none"
@@ -387,12 +484,15 @@ export default async function OwnerConsolePage() {
                               name="notes"
                               placeholder="// contract notes, billing remarks, support context"
                             />
-                            <button
+                            <ActionSubmitButton
                               className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-zinc-100 transition hover:bg-white/10"
-                              type="submit"
+                              pendingLabel="applying.contract.patch()"
                             >
                               apply.contract.patch()
-                            </button>
+                            </ActionSubmitButton>
+                            <p className="text-xs text-zinc-500">
+                              Ao aplicar, o console confirma o resultado aqui no card da empresa.
+                            </p>
                           </form>
                         </article>
                       );
