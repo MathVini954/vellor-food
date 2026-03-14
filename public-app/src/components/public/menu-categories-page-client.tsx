@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, ChevronRight, Search } from "lucide-react";
 import type { MenuCategoryPreview, PublicRestaurant } from "@/types/public";
 import { TopCartButton } from "./top-cart-button";
@@ -18,7 +17,6 @@ export function MenuCategoriesPageClient({
   restaurant,
   categories,
 }: MenuCategoriesPageClientProps) {
-  const router = useRouter();
   const [search, setSearch] = useState("");
 
   const filteredCategories = useMemo(() => {
@@ -31,21 +29,13 @@ export function MenuCategoriesPageClient({
     return categories.filter((category) => category.name.toLowerCase().includes(normalizedQuery));
   }, [categories, search]);
 
-  useEffect(() => {
-    router.prefetch(`/r/${slug}`);
-    router.prefetch(`/r/${slug}/checkout`);
-    categories.slice(0, 6).forEach((category) => {
-      router.prefetch(`/r/${slug}/menu/${category.id}`);
-    });
-  }, [categories, router, slug]);
-
   return (
     <div className="mobile-page mobile-page-top mobile-page-bottom-nav">
       <header className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link
             href={`/r/${slug}`}
-            prefetch
+            prefetch={false}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-[0_12px_24px_rgba(15,23,42,0.08)]"
           >
             <ArrowLeft size={18} />
@@ -85,7 +75,7 @@ export function MenuCategoriesPageClient({
           <Link
             key={category.id}
             href={`/r/${slug}/menu/${category.id}`}
-            prefetch
+            prefetch={false}
             className="flex items-center gap-4 rounded-[24px] bg-white p-3 shadow-[0_18px_36px_rgba(15,23,42,0.08)]"
           >
             <div className="flex h-[84px] w-[84px] shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-[#f8efe4]">

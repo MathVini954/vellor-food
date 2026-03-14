@@ -45,7 +45,7 @@ export function MyOrdersPageClient({
           <div className="flex items-center gap-3">
             <Link
               href={`/r/${slug}`}
-              prefetch
+              prefetch={false}
               className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-[0_12px_24px_rgba(15,23,42,0.08)]"
             >
               <ArrowLeft size={18} />
@@ -126,7 +126,7 @@ export function MyOrdersPageClient({
 
         <Link
           href={`/r/${slug}`}
-          prefetch
+          prefetch={false}
           className="mt-6 flex items-center justify-center gap-2 rounded-[22px] border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700"
         >
           <ClipboardList size={18} />
@@ -142,7 +142,7 @@ export function MyOrdersPageClient({
         <div className="flex items-center gap-3">
           <Link
             href={`/r/${slug}`}
-            prefetch
+            prefetch={false}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-[0_12px_24px_rgba(15,23,42,0.08)]"
           >
             <ArrowLeft size={18} />
@@ -221,7 +221,7 @@ export function MyOrdersPageClient({
 
       <Link
         href={`/r/${slug}`}
-        prefetch
+        prefetch={false}
         className="mt-6 flex items-center justify-center gap-2 rounded-[22px] border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700"
       >
         <ClipboardList size={18} />

@@ -15,7 +15,7 @@ export function TopCartButton({ slug, dark = false }: TopCartButtonProps) {
   return (
     <Link
       href={`/r/${slug}/checkout`}
-      prefetch
+      prefetch={false}
       className={`relative flex h-11 w-11 items-center justify-center rounded-full border transition ${
         dark
           ? "border-white/20 bg-black/25 text-white"

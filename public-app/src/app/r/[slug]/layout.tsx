@@ -10,6 +10,8 @@ import {
 } from "@/services/public/restaurants";
 import { tableSessionCookieName } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 export default async function RestaurantLayout({
   children,
   params,

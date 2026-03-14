@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, Heart, Minus, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { hasProductCustomizationConfig } from "@/lib/product-customization";
@@ -21,7 +20,6 @@ export function ProductDetailPageClient({
   restaurant,
   product,
 }: ProductDetailPageClientProps) {
-  const router = useRouter();
   const hasAutoOpenedRef = useRef<string | null>(null);
   const {
     addItem,
@@ -37,14 +35,6 @@ export function ProductDetailPageClient({
     .reduce((total, item) => total + item.quantity, 0);
   const categoryHref = `/r/${slug}/menu/${product.categoryId}`;
   const isCustomizable = hasProductCustomizationConfig(product.customizationConfig);
-
-  useEffect(() => {
-    router.prefetch(categoryHref);
-    router.prefetch(`/r/${slug}/checkout`);
-    product.relatedProducts.slice(0, 4).forEach((relatedProduct) => {
-      router.prefetch(`/r/${slug}/produto/${relatedProduct.id}`);
-    });
-  }, [categoryHref, product.relatedProducts, router, slug]);
 
   useEffect(() => {
     if (!isCustomizable || hasAutoOpenedRef.current === product.id) {
@@ -66,7 +56,7 @@ export function ProductDetailPageClient({
           <div className="absolute inset-x-0 top-0 flex items-center justify-between px-5 pt-4">
             <Link
               href={categoryHref}
-              prefetch
+              prefetch={false}
               className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur"
             >
               <ArrowLeft size={18} />
@@ -147,7 +137,7 @@ export function ProductDetailPageClient({
                   <Link
                     key={category.id}
                     href={`/r/${slug}/menu/${category.id}`}
-                    prefetch
+                    prefetch={false}
                     className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
                   >
                     {category.name}
@@ -165,7 +155,7 @@ export function ProductDetailPageClient({
                   <Link
                     key={relatedProduct.id}
                     href={`/r/${slug}/produto/${relatedProduct.id}`}
-                    prefetch
+                    prefetch={false}
                     className="min-w-[150px] rounded-[22px] bg-white p-2 shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
                   >
                     <div className="aspect-[1/0.86] overflow-hidden rounded-[18px] bg-[#f8efe4]">

@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { ArrowLeft, Heart, Plus, Search } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import type {
@@ -26,7 +25,6 @@ export function CategoryProductsPageClient({
   category,
   categories,
 }: CategoryProductsPageClientProps) {
-  const router = useRouter();
   const [search, setSearch] = useState("");
   const { addItem, cart, isFavorite, toggleFavorite } = useRestaurantStore();
 
@@ -55,24 +53,13 @@ export function CategoryProductsPageClient({
     return lookup;
   }, [cart]);
 
-  useEffect(() => {
-    router.prefetch(`/r/${slug}/menu`);
-    router.prefetch(`/r/${slug}/checkout`);
-    categories.slice(0, 6).forEach((item) => {
-      router.prefetch(`/r/${slug}/menu/${item.id}`);
-    });
-    category.products.slice(0, 6).forEach((product) => {
-      router.prefetch(`/r/${slug}/produto/${product.id}`);
-    });
-  }, [categories, category.products, router, slug]);
-
   return (
     <div className="mobile-page mobile-page-top mobile-page-bottom-nav">
       <header className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link
             href={`/r/${slug}/menu`}
-            prefetch
+            prefetch={false}
             className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-[0_12px_24px_rgba(15,23,42,0.08)]"
           >
             <ArrowLeft size={18} />
@@ -100,7 +87,7 @@ export function CategoryProductsPageClient({
           <Link
             key={item.id}
             href={`/r/${slug}/menu/${item.id}`}
-            prefetch
+            prefetch={false}
             className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold transition ${
               item.id === category.id
                 ? "bg-[#e3342f] text-white"
@@ -124,7 +111,7 @@ export function CategoryProductsPageClient({
               <div className="flex items-start gap-3">
                 <Link
                   href={`/r/${slug}/produto/${product.id}`}
-                  prefetch
+                  prefetch={false}
                   className="flex h-[88px] w-[88px] shrink-0 items-center justify-center overflow-hidden rounded-[18px] bg-[#f8efe4]"
                 >
                   {product.imageUrl ? (
@@ -135,7 +122,7 @@ export function CategoryProductsPageClient({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Link href={`/r/${slug}/produto/${product.id}`} prefetch>
+                      <Link href={`/r/${slug}/produto/${product.id}`} prefetch={false}>
                         <h3 className="truncate text-[15px] font-bold text-slate-900">{product.name}</h3>
                       </Link>
                       <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500">

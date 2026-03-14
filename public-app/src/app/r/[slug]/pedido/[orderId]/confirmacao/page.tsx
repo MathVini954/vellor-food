@@ -25,6 +25,7 @@ export default async function OrderConfirmationPage({
             </p>
             <Link
               href={`/r/${slug}`}
+              prefetch={false}
               className="mt-6 inline-flex rounded-[18px] bg-[#e3342f] px-5 py-3 text-sm font-semibold text-white"
             >
               Voltar ao cardapio
@@ -114,6 +115,7 @@ export default async function OrderConfirmationPage({
         {isDineInOrder ? (
           <Link
             href={`/r/${slug}/meus-pedidos`}
+            prefetch={false}
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-[22px] bg-[#111827] px-5 py-4 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]"
           >
             Ver comanda da mesa
@@ -131,6 +133,7 @@ export default async function OrderConfirmationPage({
 
         <Link
           href={isDineInOrder ? `/r/${slug}` : `/r/${slug}/meus-pedidos`}
+          prefetch={false}
           className="mt-4 flex w-full items-center justify-center rounded-[22px] bg-[#111827] px-5 py-4 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]"
         >
           {isDineInOrder ? "Adicionar mais itens" : "Acompanhar meus pedidos"}
@@ -138,6 +141,7 @@ export default async function OrderConfirmationPage({
 
         <Link
           href={`/r/${slug}`}
+          prefetch={false}
           className="mt-3 flex w-full items-center justify-center rounded-[22px] border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700"
         >
           {isDineInOrder ? "Voltar ao cardapio" : "Fazer novo pedido"}

@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { ChevronRight, Heart, Plus, Search, SlidersHorizontal } from "lucide-react";
 import type {
   MenuCategorySection,
@@ -48,7 +47,6 @@ export function HomePageClient({
   discovery,
   categories,
 }: HomePageClientProps) {
-  const router = useRouter();
   const [search, setSearch] = useState("");
   const [activeOfferIndex, setActiveOfferIndex] = useState(0);
   const { customer, addItem, cart, isFavorite, toggleFavorite } = useRestaurantStore();
@@ -96,17 +94,6 @@ export function HomePageClient({
     return () => window.clearInterval(intervalId);
   }, [discovery.offers.length]);
 
-  useEffect(() => {
-    router.prefetch(`/r/${slug}/menu`);
-    router.prefetch(`/r/${slug}/checkout`);
-    discovery.categories.slice(0, 4).forEach((category) => {
-      router.prefetch(`/r/${slug}/menu/${category.id}`);
-    });
-    discovery.popularProducts.slice(0, 4).forEach((product) => {
-      router.prefetch(`/r/${slug}/produto/${product.id}`);
-    });
-  }, [discovery.categories, discovery.popularProducts, router, slug]);
-
   return (
     <div className="mobile-page mobile-page-top mobile-page-bottom-nav">
       <header className="flex items-start justify-between gap-4">
@@ -148,7 +135,7 @@ export function HomePageClient({
 
         <Link
           href={`/r/${slug}/menu`}
-          prefetch
+          prefetch={false}
           className="flex h-12 w-12 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-900 shadow-[0_10px_24px_rgba(15,23,42,0.05)]"
           aria-label="Abrir menu"
         >
@@ -166,7 +153,7 @@ export function HomePageClient({
           </div>
           <Link
             href={`/r/${slug}/menu`}
-            prefetch
+            prefetch={false}
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#e3342f]"
           >
             Ver cardapio
@@ -179,7 +166,7 @@ export function HomePageClient({
             <Link
               key={category.id}
               href={`/r/${slug}/menu/${category.id}`}
-              prefetch
+              prefetch={false}
               className="min-w-[74px] rounded-[18px] bg-white p-2 text-center shadow-[0_16px_30px_rgba(15,23,42,0.06)]"
             >
               <div className="mx-auto flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-[#fff4ef]">
@@ -288,7 +275,7 @@ export function HomePageClient({
                   key={product.id}
                   className="overflow-hidden rounded-[24px] bg-white p-2 shadow-[0_18px_36px_rgba(15,23,42,0.08)]"
                 >
-                  <Link href={`/r/${slug}/produto/${product.id}`} prefetch>
+                  <Link href={`/r/${slug}/produto/${product.id}`} prefetch={false}>
                     <div className="aspect-[1/1] overflow-hidden rounded-[20px] bg-[#f7efe7]">
                       {product.imageUrl ? (
                         <img
@@ -301,7 +288,7 @@ export function HomePageClient({
                   </Link>
                   <div className="px-1 pb-1 pt-3">
                     <p className="truncate text-[11px] font-medium text-slate-400">{product.categoryName}</p>
-                    <Link href={`/r/${slug}/produto/${product.id}`} prefetch className="mt-1 block">
+                    <Link href={`/r/${slug}/produto/${product.id}`} prefetch={false} className="mt-1 block">
                       <h3 className="line-clamp-1 text-sm font-bold text-slate-900">{product.name}</h3>
                     </Link>
                     <div className="mt-3 flex items-center justify-between gap-2">
@@ -348,7 +335,7 @@ export function HomePageClient({
               </div>
               <Link
                 href={`/r/${slug}/menu`}
-                prefetch
+                prefetch={false}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[#e3342f]"
               >
                 Ver tudo
@@ -365,7 +352,7 @@ export function HomePageClient({
                     key={product.id}
                     className="min-w-[178px] rounded-[26px] bg-white p-2 shadow-[0_20px_38px_rgba(15,23,42,0.08)]"
                   >
-                    <Link href={`/r/${slug}/produto/${product.id}`} prefetch>
+                    <Link href={`/r/${slug}/produto/${product.id}`} prefetch={false}>
                       <div className="aspect-[1/0.88] overflow-hidden rounded-[22px] bg-[#f8efe4]">
                         {product.imageUrl ? (
                           <img
@@ -380,7 +367,7 @@ export function HomePageClient({
                       <p className="truncate text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
                         {product.categoryName}
                       </p>
-                      <Link href={`/r/${slug}/produto/${product.id}`} prefetch className="mt-1 block">
+                      <Link href={`/r/${slug}/produto/${product.id}`} prefetch={false} className="mt-1 block">
                         <h3 className="line-clamp-1 text-[15px] font-bold text-slate-900">{product.name}</h3>
                       </Link>
                       <p className="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500">
@@ -422,7 +409,7 @@ export function HomePageClient({
               </div>
               <Link
                 href={`/r/${slug}/menu`}
-                prefetch
+                prefetch={false}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[#e3342f]"
               >
                 Ver tudo
@@ -439,7 +426,7 @@ export function HomePageClient({
                     key={product.id}
                     className="overflow-hidden rounded-[24px] bg-white p-2 shadow-[0_18px_36px_rgba(15,23,42,0.08)]"
                   >
-                    <Link href={`/r/${slug}/produto/${product.id}`} prefetch>
+                    <Link href={`/r/${slug}/produto/${product.id}`} prefetch={false}>
                       <div className="aspect-[1/0.9] overflow-hidden rounded-[20px] bg-[#f8efe4]">
                         {product.imageUrl ? (
                           <img
@@ -454,7 +441,7 @@ export function HomePageClient({
                       <p className="truncate text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
                         {product.categoryName}
                       </p>
-                      <Link href={`/r/${slug}/produto/${product.id}`} prefetch className="mt-1 block">
+                      <Link href={`/r/${slug}/produto/${product.id}`} prefetch={false} className="mt-1 block">
                         <h3 className="line-clamp-1 text-sm font-bold text-slate-900">{product.name}</h3>
                       </Link>
                       <div className="mt-3 flex items-center justify-between gap-2">

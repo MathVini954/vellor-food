@@ -60,6 +60,7 @@ export function MobileBottomNav({ slug, activeTab }: MobileBottomNavProps) {
             <Link
               key={item.id}
               href={href}
+              prefetch={false}
               className={clsx(
                 "relative flex min-w-[58px] flex-col items-center gap-1 px-1 py-1 text-[10px] font-medium transition",
                 activeTab === item.id ? "text-[#e3342f]" : "text-slate-400",
