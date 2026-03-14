@@ -28,6 +28,10 @@ function resolveAdminApiBaseUrl() {
 
   const { origin, hostname, port } = window.location;
 
+  if (hostname === "vellor-admin.vercel.app") {
+    return "https://vellor-food.vercel.app/api/admin";
+  }
+
   if (hostname === "localhost" && port !== "3000") {
     return "http://localhost:3000/api/admin";
   }
