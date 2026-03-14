@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { AdminLayoutContext } from "./components/AdminLayoutContext";
 import type {
   AdminInitialSetup,
+  AdminNotification,
   AdminSection,
   Offer,
   OrderStatus,
   RestaurantSettings,
+  AdminUnreadSignals,
 } from "./types/dashboard";
 import {
   closeDiningTableSession,
@@ -178,56 +181,85 @@ function ErrorState({
   );
 }
 
-type LiveNotification = {
-  id: string;
-  title: string;
-  body: string;
-  accent: "online" | "tables";
-};
-
 function FloatingNotifications({
   notifications,
-  unreadSignals,
 }: {
-  notifications: LiveNotification[];
-  unreadSignals: { online: number; tables: number };
+  notifications: AdminNotification[];
 }) {
-  if (!notifications.length && !unreadSignals.online && !unreadSignals.tables) {
+  if (!notifications.length) {
     return null;
   }
 
   return (
-    <div className="pointer-events-none fixed right-5 top-5 z-[100] flex w-full max-w-sm flex-col gap-3">
+    <div className="pointer-events-none fixed right-4 top-4 z-[120] flex w-full max-w-[360px] flex-col gap-3 sm:right-6 sm:top-6">
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className={`rounded-[28px] border bg-white/95 px-5 py-4 shadow-[0_25px_60px_rgba(15,23,42,0.22)] backdrop-blur ${
-            notification.accent === "tables" ? "border-emerald-200" : "border-sky-200"
-          }`}
+          className="iphone-toast overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(250,245,240,0.92))] px-5 py-4 shadow-[var(--shadow-float)] backdrop-blur-2xl"
         >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-400">
-            {notification.accent === "tables" ? "Mesa" : "Online"}
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-[14px] text-white ${
+                  notification.accent === "tables"
+                    ? "bg-[linear-gradient(135deg,#2f6c60,#58a08f)]"
+                    : "bg-[linear-gradient(135deg,#d38664,#b75d3e)]"
+                }`}
+              >
+                {notification.accent === "tables" ? <ToastTableIcon /> : <ToastBagIcon />}
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--text-soft)]">
+                  {notification.accent === "tables" ? "MesaPilot Mesas" : "MesaPilot Pedidos"}
+                </p>
+                <p className="mt-1 text-xs font-medium text-[color:var(--text-muted)]">
+                  Agora • {formatToastTime(notification.createdAt)}
+                </p>
+              </div>
+            </div>
+            <div className="h-1.5 w-12 rounded-full bg-black/6" />
+          </div>
+
+          <h3 className="text-sm font-semibold text-[color:var(--text-strong)]">{notification.title}</h3>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--text-muted)]">
+            {normalizeNotificationText(notification.body)}
           </p>
-          <h3 className="mt-2 text-sm font-semibold text-slate-950">{notification.title}</h3>
-          <p className="mt-1 text-sm leading-6 text-slate-500">{notification.body}</p>
         </div>
       ))}
-
-      {(unreadSignals.online > 0 || unreadSignals.tables > 0) ? (
-        <div className="pointer-events-auto flex flex-wrap gap-2">
-          {unreadSignals.online > 0 ? (
-            <div className="rounded-full border border-sky-200 bg-white px-4 py-2 text-xs font-semibold text-sky-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-              {unreadSignals.online} novo(s) em pedidos online
-            </div>
-          ) : null}
-          {unreadSignals.tables > 0 ? (
-            <div className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold text-emerald-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-              {unreadSignals.tables} novo(s) em mesas
-            </div>
-          ) : null}
-        </div>
-      ) : null}
     </div>
+  );
+}
+
+function formatToastTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "agora";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function normalizeNotificationText(value: string) {
+  return value.replace(/â€¢|•/g, "/");
+}
+
+function ToastBagIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8">
+      <path d="M7 9h10l-.8 9.2a2 2 0 0 1-2 1.8H9.8a2 2 0 0 1-2-1.8L7 9Zm3-2a2 2 0 1 1 4 0" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ToastTableIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Zm4 6v4m8-4v4M4 10h16" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -238,8 +270,9 @@ export default function App() {
   const [bootstrap, setBootstrap] = useState<AdminBootstrap | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(readStoredSession()));
   const [loadError, setLoadError] = useState("");
-  const [notifications, setNotifications] = useState<LiveNotification[]>([]);
-  const [unreadSignals, setUnreadSignals] = useState({ online: 0, tables: 0 });
+  const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+  const [toastNotifications, setToastNotifications] = useState<AdminNotification[]>([]);
+  const [unreadSignals, setUnreadSignals] = useState<AdminUnreadSignals>({ online: 0, tables: 0 });
   const seenOrderIdsRef = useRef<{ online: Set<string>; tables: Set<string> }>({
     online: new Set(),
     tables: new Set(),
@@ -306,10 +339,20 @@ export default function App() {
 
     if (section === "PedidosOnline") {
       setUnreadSignals((current) => ({ ...current, online: 0 }));
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.accent === "online" ? { ...notification, isRead: true } : notification,
+        ),
+      );
     }
 
     if (section === "Mesas") {
       setUnreadSignals((current) => ({ ...current, tables: 0 }));
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.accent === "tables" ? { ...notification, isRead: true } : notification,
+        ),
+      );
     }
 
     const targetPath = buildAdminRoute(section, session.restaurantSlug);
@@ -320,6 +363,11 @@ export default function App() {
 
     window.history.pushState({}, "", targetPath);
     setPathname(targetPath);
+  }
+
+  function handleOpenNotifications() {
+    setUnreadSignals({ online: 0, tables: 0 });
+    setNotifications((current) => current.map((notification) => ({ ...notification, isRead: true })));
   }
 
   async function loadBootstrap(options?: { silent?: boolean }) {
@@ -352,24 +400,30 @@ export default function App() {
         );
 
         if (newOnlineOrders.length || newTableOrders.length) {
-          const nextNotifications: LiveNotification[] = [
+          const createdAt = new Date().toISOString();
+          const nextNotifications: AdminNotification[] = [
             ...newOnlineOrders.map((order) => ({
               id: `online-${order.id}`,
               title: `Novo pedido online ${order.id}`,
               body: `${order.customer} • ${order.total}`,
               accent: "online" as const,
+              createdAt,
+              isRead: currentSection === "PedidosOnline",
             })),
             ...newTableOrders.map((order) => ({
               id: `table-${order.id}`,
               title: `${order.tableLabel ?? "Mesa"} recebeu novo pedido`,
               body: `${order.customer} • ${order.total}`,
               accent: "tables" as const,
+              createdAt,
+              isRead: currentSection === "Mesas",
             })),
           ];
 
-          setNotifications((current) => [...nextNotifications, ...current].slice(0, 4));
+          setToastNotifications((current) => [...nextNotifications, ...current].slice(0, 3));
+          setNotifications((current) => [...nextNotifications, ...current].slice(0, 10));
           window.setTimeout(() => {
-            setNotifications((current) =>
+            setToastNotifications((current) =>
               current.filter(
                 (notification) =>
                   !nextNotifications.some((candidate) => candidate.id === notification.id),
@@ -466,6 +520,9 @@ export default function App() {
       persistSession(result.session);
       setBootstrap(null);
       setLoadError("");
+      setNotifications([]);
+      setToastNotifications([]);
+      setUnreadSignals({ online: 0, tables: 0 });
       const dashboardPath = buildAdminRoute("Dashboard", result.session.restaurantSlug);
       window.history.pushState({}, "", dashboardPath);
       setPathname(dashboardPath);
@@ -483,6 +540,9 @@ export default function App() {
       persistSession(nextSession);
       setBootstrap(null);
       setLoadError("");
+      setNotifications([]);
+      setToastNotifications([]);
+      setUnreadSignals({ online: 0, tables: 0 });
       const dashboardPath = buildAdminRoute("Dashboard", nextSession.restaurantSlug);
       window.history.pushState({}, "", dashboardPath);
       setPathname(dashboardPath);
@@ -500,6 +560,7 @@ export default function App() {
     setBootstrap(null);
     setLoadError("");
     setNotifications([]);
+    setToastNotifications([]);
     setUnreadSignals({ online: 0, tables: 0 });
     seenOrderIdsRef.current = {
       online: new Set(),
@@ -523,6 +584,9 @@ export default function App() {
       persistSession(nextSession);
       setBootstrap(null);
       setLoadError("");
+      setNotifications([]);
+      setToastNotifications([]);
+      setUnreadSignals({ online: 0, tables: 0 });
       const dashboardPath = buildAdminRoute("Dashboard", nextSession.restaurantSlug);
       window.history.pushState({}, "", dashboardPath);
       setPathname(dashboardPath);
@@ -870,6 +934,8 @@ export default function App() {
           featureAccess={bootstrap.featureAccess}
           metrics={bootstrap.metrics}
           orders={bootstrap.orders}
+          tableOrders={bootstrap.tableOrders}
+          customers={bootstrap.customers}
           onLogout={handleLogout}
           onNavigate={navigateToSection}
         />
@@ -878,9 +944,15 @@ export default function App() {
   }
 
   return (
-    <>
-      <FloatingNotifications notifications={notifications} unreadSignals={unreadSignals} />
+    <AdminLayoutContext.Provider
+      value={{
+        notifications,
+        unreadSignals,
+        onOpenNotifications: handleOpenNotifications,
+      }}
+    >
+      <FloatingNotifications notifications={toastNotifications} />
       {page}
-    </>
+    </AdminLayoutContext.Provider>
   );
 }

@@ -125,8 +125,8 @@ export function MenuManagementPage({
                   onClick={() => setActiveCategoryId(category.id)}
                   className={`rounded-2xl px-4 py-3 text-left transition ${
                     activeCategory.id === category.id
-                      ? "bg-[#171b38] text-white"
-                      : "bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      ? "bg-[linear-gradient(135deg,#d38664,#b75d3e)] text-white shadow-[0_16px_28px_rgba(183,93,62,0.2)]"
+                      : "bg-white/84 text-[color:var(--text-muted)] hover:bg-white hover:text-[color:var(--text-strong)]"
                   }`}
                 >
                   <div className="text-sm font-semibold">{category.name}</div>
@@ -142,7 +142,7 @@ export function MenuManagementPage({
             </div>
 
             <button
-              className="rounded-2xl bg-[#171b38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f1730]"
+              className="action-primary"
               type="button"
               onClick={handleCreate}
             >

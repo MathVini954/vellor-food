@@ -5,8 +5,8 @@ type OfferStatusBadgeProps = {
 };
 
 const statusStyles: Record<OfferStatus, string> = {
-  Ativa: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
-  Inativa: "bg-slate-100 text-slate-600 ring-1 ring-slate-200",
+  Ativa: "bg-[color:var(--accent-green-soft)] text-[color:var(--accent-green)] ring-1 ring-[rgba(47,108,96,0.12)]",
+  Inativa: "bg-white/84 text-[color:var(--text-muted)] ring-1 ring-[color:var(--border-soft)]",
 };
 
 export function OfferStatusBadge({ status }: OfferStatusBadgeProps) {

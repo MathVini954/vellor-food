@@ -5,12 +5,12 @@ type StatusBadgeProps = {
 };
 
 const statusStyles: Record<OrderStatus, string> = {
-  Novo: "bg-sky-50 text-sky-700 ring-1 ring-sky-100",
-  Aceito: "bg-violet-50 text-violet-700 ring-1 ring-violet-100",
-  "Em preparo": "bg-amber-50 text-amber-700 ring-1 ring-amber-100",
-  Enviado: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100",
-  Entregue: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
-  Cancelado: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
+  Novo: "bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)] ring-1 ring-[rgba(183,93,62,0.12)]",
+  Aceito: "bg-[rgba(56,94,157,0.12)] text-[#35558b] ring-1 ring-[rgba(56,94,157,0.12)]",
+  "Em preparo": "bg-[rgba(217,146,43,0.14)] text-[#9d6119] ring-1 ring-[rgba(217,146,43,0.16)]",
+  Enviado: "bg-[rgba(91,79,171,0.12)] text-[#51439f] ring-1 ring-[rgba(91,79,171,0.12)]",
+  Entregue: "bg-[color:var(--accent-green-soft)] text-[color:var(--accent-green)] ring-1 ring-[rgba(47,108,96,0.12)]",
+  Cancelado: "bg-[rgba(199,73,90,0.12)] text-[#b3384c] ring-1 ring-[rgba(199,73,90,0.12)]",
 };
 
 export function StatusBadge({ status }: StatusBadgeProps) {

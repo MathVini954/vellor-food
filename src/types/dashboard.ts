@@ -7,6 +7,22 @@ export type Metric = {
   trend: "up" | "neutral";
 };
 
+export type AdminNotificationTone = "online" | "tables";
+
+export type AdminNotification = {
+  id: string;
+  title: string;
+  body: string;
+  accent: AdminNotificationTone;
+  createdAt: string;
+  isRead: boolean;
+};
+
+export type AdminUnreadSignals = {
+  online: number;
+  tables: number;
+};
+
 export type AdminSection =
   | "Dashboard"
   | "PedidosOnline"

@@ -245,13 +245,15 @@ export function OrdersManagementPage({
       onNavigate={onNavigate}
       aside={<OrderDetailsPanel order={selectedOrder} />}
     >
-      <section className="mb-5 flex flex-col gap-4 rounded-[24px] border border-slate-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="panel mb-5 flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setActiveTab("ativos")}
             className={`rounded-2xl px-4 py-3 text-left transition ${
-              activeTab === "ativos" ? "bg-[#171b38] text-white" : "bg-slate-50 text-slate-600"
+              activeTab === "ativos"
+                ? "bg-[linear-gradient(135deg,#d38664,#b75d3e)] text-white shadow-[0_16px_28px_rgba(183,93,62,0.2)]"
+                : "bg-white/84 text-[color:var(--text-muted)]"
             }`}
           >
             <div className="text-sm font-semibold">Pedidos ativos</div>
@@ -263,7 +265,9 @@ export function OrdersManagementPage({
             type="button"
             onClick={() => setActiveTab("finalizados")}
             className={`rounded-2xl px-4 py-3 text-left transition ${
-              activeTab === "finalizados" ? "bg-[#171b38] text-white" : "bg-slate-50 text-slate-600"
+              activeTab === "finalizados"
+                ? "bg-[linear-gradient(135deg,#2f6c60,#58a08f)] text-white shadow-[0_16px_28px_rgba(47,108,96,0.18)]"
+                : "bg-white/84 text-[color:var(--text-muted)]"
             }`}
           >
             <div className="text-sm font-semibold">Pedidos finalizados</div>
@@ -286,8 +290,8 @@ export function OrdersManagementPage({
               onClick={() => setPeriod(option.value as PeriodFilter)}
               className={`rounded-2xl px-4 py-2.5 text-sm transition ${
                 period === option.value
-                  ? "bg-slate-900 text-white"
-                  : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  ? "bg-[color:var(--text-strong)] text-white"
+                  : "border border-[color:var(--border-soft)] bg-white/84 text-[color:var(--text-muted)] hover:bg-white"
               }`}
             >
               {option.label}
@@ -297,15 +301,15 @@ export function OrdersManagementPage({
       </section>
 
       {period === "personalizado" ? (
-        <section className="mb-5 rounded-[24px] border border-slate-200 bg-white p-4">
+        <section className="panel mb-5 p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h3 className="text-base font-semibold text-slate-950">Periodo personalizado</h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <h3 className="text-base font-semibold text-[color:var(--text-strong)]">Periodo personalizado</h3>
+              <p className="mt-1 text-sm text-[color:var(--text-muted)]">
                 Defina uma janela especifica para consultar pedidos finalizados ou ativos.
               </p>
             </div>
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <div className="panel-muted px-4 py-3 text-sm text-[color:var(--text-muted)]">
               {formatDateLabel(startDate)} ate {formatDateLabel(endDate)}
             </div>
           </div>
@@ -333,7 +337,7 @@ export function OrdersManagementPage({
                 setStartDate(today);
                 setEndDate(today);
               }}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50"
+              className="action-secondary !px-4 !py-2.5"
             >
               Usar hoje
             </button>
@@ -346,7 +350,7 @@ export function OrdersManagementPage({
                 setStartDate(toDateInputValue(lastWeek));
                 setEndDate(toDateInputValue(now));
               }}
-              className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50"
+              className="action-secondary !px-4 !py-2.5"
             >
               Ultimos 7 dias
             </button>
@@ -355,7 +359,7 @@ export function OrdersManagementPage({
       ) : null}
 
       {actionError ? (
-        <section className="mb-5 rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <section className="mb-5 rounded-[24px] border border-[rgba(199,73,90,0.18)] bg-[rgba(254,237,240,0.92)] px-4 py-3 text-sm text-[#b3384c]">
           {actionError}
         </section>
       ) : null}

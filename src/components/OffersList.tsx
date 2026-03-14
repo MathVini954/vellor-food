@@ -9,17 +9,18 @@ type OffersListProps = {
 
 export function OffersList({ offers, onEdit, onToggleStatus }: OffersListProps) {
   return (
-    <section className="panel overflow-hidden rounded-[28px]">
-      <div className="border-b border-slate-200 px-5 py-5">
-        <h1 className="text-2xl font-semibold text-slate-900">Ofertas e Promocoes</h1>
-        <p className="mt-1 text-sm text-slate-500">
+    <section className="panel overflow-hidden">
+      <div className="border-b border-[color:var(--border-soft)] px-5 py-5">
+        <p className="section-label">Comercial</p>
+        <h1 className="mt-2 text-2xl font-semibold text-[color:var(--text-strong)]">Ofertas e Promocoes</h1>
+        <p className="mt-2 text-sm text-[color:var(--text-muted)]">
           Crie campanhas para aumentar vendas, promover categorias e destacar pratos do dia.
         </p>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-[980px] w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50/80 text-left text-xs uppercase tracking-[0.18em] text-slate-400">
+        <table className="min-w-[980px] w-full divide-y divide-[color:var(--border-soft)]">
+          <thead className="bg-[color:var(--surface-muted)] text-left text-xs uppercase tracking-[0.18em] text-[color:var(--text-soft)]">
             <tr>
               <th className="px-5 py-4">Nome da oferta</th>
               <th className="px-5 py-4">Tipo da oferta</th>
@@ -30,17 +31,15 @@ export function OffersList({ offers, onEdit, onToggleStatus }: OffersListProps) 
               <th className="px-5 py-4">Acoes</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-600">
+          <tbody className="divide-y divide-[color:var(--border-soft)] bg-white/82 text-sm text-[color:var(--text-muted)]">
             {offers.map((offer) => (
-              <tr key={offer.id} className="hover:bg-slate-50/70">
+              <tr key={offer.id} className="transition hover:bg-white">
                 <td className="px-5 py-4">
-                  <div className="font-semibold text-slate-900">{offer.name}</div>
-                  <div className="mt-1 text-xs text-slate-500">
-                    Inicio: {offer.startDate}
-                  </div>
+                  <div className="font-semibold text-[color:var(--text-strong)]">{offer.name}</div>
+                  <div className="mt-1 text-xs text-[color:var(--text-muted)]">Inicio: {offer.startDate}</div>
                 </td>
                 <td className="px-5 py-4">{offer.type}</td>
-                <td className="px-5 py-4 font-medium text-slate-900">{offer.discount}</td>
+                <td className="px-5 py-4 font-medium text-[color:var(--text-strong)]">{offer.discount}</td>
                 <td className="px-5 py-4">{offer.appliesTo}</td>
                 <td className="px-5 py-4">{offer.endDate}</td>
                 <td className="px-5 py-4">
@@ -49,14 +48,14 @@ export function OffersList({ offers, onEdit, onToggleStatus }: OffersListProps) 
                 <td className="px-5 py-4">
                   <div className="flex min-w-[210px] gap-2">
                     <button
-                      className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                      className="action-secondary !rounded-xl !px-3 !py-2 !text-xs"
                       type="button"
                       onClick={() => onEdit(offer)}
                     >
                       Editar
                     </button>
                     <button
-                      className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition hover:bg-amber-100"
+                      className="action-warning !rounded-xl !px-3 !py-2 !text-xs"
                       type="button"
                       onClick={() => onToggleStatus(offer.id)}
                     >

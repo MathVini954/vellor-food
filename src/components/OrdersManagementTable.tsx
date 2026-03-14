@@ -34,21 +34,22 @@ export function OrdersManagementTable({
   pendingOrderId = null,
 }: OrdersManagementTableProps) {
   return (
-    <section className="panel overflow-hidden rounded-[28px]">
-      <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+    <section className="panel overflow-hidden">
+      <div className="flex flex-col gap-4 border-b border-[color:var(--border-soft)] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-          <p className="mt-1 text-sm text-slate-500">{description}</p>
+          <p className="section-label">Operacao online</p>
+          <h1 className="mt-2 text-2xl font-semibold text-[color:var(--text-strong)]">{title}</h1>
+          <p className="mt-2 text-sm text-[color:var(--text-muted)]">{description}</p>
         </div>
-        <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-600">
+        <div className="panel-muted px-4 py-3 text-sm text-[color:var(--text-muted)]">
           Sincronizacao automatica ativa
         </div>
       </div>
 
       {orders.length ? (
         <div className="overflow-x-auto">
-          <table className="min-w-[1180px] w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50/80 text-left text-xs uppercase tracking-[0.18em] text-slate-400">
+          <table className="min-w-[1180px] w-full divide-y divide-[color:var(--border-soft)]">
+            <thead className="bg-[color:var(--surface-muted)] text-left text-xs uppercase tracking-[0.18em] text-[color:var(--text-soft)]">
               <tr>
                 <th className="px-5 py-4">Numero do pedido</th>
                 <th className="px-5 py-4">Cliente</th>
@@ -60,18 +61,18 @@ export function OrdersManagementTable({
                 <th className="px-5 py-4">Acoes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 bg-white text-sm text-slate-600">
+            <tbody className="divide-y divide-[color:var(--border-soft)] bg-white/82 text-sm text-[color:var(--text-muted)]">
               {orders.map((order) => {
                 const primaryAction = actionLabels[order.status];
                 const isFinalized = order.status === "Entregue" || order.status === "Cancelado";
                 const isPending = pendingOrderId === order.id;
 
                 return (
-                  <tr key={order.id} className="align-top hover:bg-slate-50/70">
-                    <td className="px-5 py-4 font-semibold text-slate-900">{order.id}</td>
+                  <tr key={order.id} className="align-top transition hover:bg-white">
+                    <td className="px-5 py-4 font-semibold text-[color:var(--text-strong)]">{order.id}</td>
                     <td className="px-5 py-4">
-                      <div className="font-medium text-slate-900">{order.customer}</div>
-                      <div className="mt-1 text-xs text-slate-500">{order.address}</div>
+                      <div className="font-medium text-[color:var(--text-strong)]">{order.customer}</div>
+                      <div className="mt-1 text-xs text-[color:var(--text-muted)]">{order.address}</div>
                     </td>
                     <td className="px-5 py-4">{order.phone}</td>
                     <td className="px-5 py-4">
@@ -83,7 +84,7 @@ export function OrdersManagementTable({
                         ))}
                       </div>
                     </td>
-                    <td className="px-5 py-4 font-medium text-slate-900">{order.total}</td>
+                    <td className="px-5 py-4 font-medium text-[color:var(--text-strong)]">{order.total}</td>
                     <td className="px-5 py-4">
                       <StatusBadge status={order.status} />
                     </td>
@@ -91,7 +92,7 @@ export function OrdersManagementTable({
                     <td className="px-5 py-4">
                       <div className="flex min-w-[230px] flex-col gap-2">
                         <button
-                          className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                          className="action-secondary !rounded-xl !px-3 !py-2 !text-xs"
                           type="button"
                           disabled={isPending}
                           onClick={() => onViewDetails(order)}
@@ -100,7 +101,7 @@ export function OrdersManagementTable({
                         </button>
                         {primaryAction ? (
                           <button
-                            className="rounded-xl bg-ink px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="action-primary !rounded-xl !px-3 !py-2 !text-xs disabled:cursor-not-allowed disabled:opacity-60"
                             type="button"
                             disabled={isPending}
                             onClick={() => onAdvanceStatus(order.id)}
@@ -110,7 +111,7 @@ export function OrdersManagementTable({
                         ) : null}
                         {!isFinalized ? (
                           <button
-                            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="action-warning !rounded-xl !px-3 !py-2 !text-xs disabled:cursor-not-allowed disabled:opacity-60"
                             type="button"
                             disabled={isPending}
                             onClick={() => onCancelOrder(order.id)}
@@ -119,7 +120,7 @@ export function OrdersManagementTable({
                           </button>
                         ) : null}
                         <button
-                          className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="action-danger !rounded-xl !px-3 !py-2 !text-xs disabled:cursor-not-allowed disabled:opacity-60"
                           type="button"
                           disabled={isPending}
                           onClick={() => onDeleteOrder(order.id)}
@@ -136,8 +137,8 @@ export function OrdersManagementTable({
         </div>
       ) : (
         <div className="px-5 py-14 text-center">
-          <h3 className="text-lg font-semibold text-slate-900">{emptyStateTitle}</h3>
-          <p className="mt-2 text-sm text-slate-500">{emptyStateDescription}</p>
+          <h3 className="text-lg font-semibold text-[color:var(--text-strong)]">{emptyStateTitle}</h3>
+          <p className="mt-2 text-sm text-[color:var(--text-muted)]">{emptyStateDescription}</p>
         </div>
       )}
     </section>

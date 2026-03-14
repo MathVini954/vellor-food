@@ -1,4 +1,4 @@
-import type { AdminSection, FeatureAccess } from "../types/dashboard";
+import type { AdminSection, AdminUnreadSignals, FeatureAccess } from "../types/dashboard";
 
 const navigationGroups: Array<{
   label: string;
@@ -10,15 +10,15 @@ const navigationGroups: Array<{
       { section: "Dashboard", title: "Dashboard", icon: "dashboard" },
       { section: "PedidosOnline", title: "Pedidos online", icon: "orders" },
       { section: "Mesas", title: "Mesas", icon: "tables" },
-      { section: "Cardapio", title: "Cardápio", icon: "menu" },
+      { section: "Cardapio", title: "Cardapio", icon: "menu" },
     ],
   },
   {
-    label: "Comercial",
+    label: "Gestao",
     items: [
       { section: "Ofertas", title: "Ofertas", icon: "offers" },
       { section: "Clientes", title: "Clientes", icon: "customers" },
-      { section: "Configuracoes", title: "Configurações", icon: "settings" },
+      { section: "Configuracoes", title: "Configuracoes", icon: "settings" },
     ],
   },
 ];
@@ -28,7 +28,9 @@ type SidebarProps = {
   restaurantName: string;
   userName: string;
   featureAccess?: FeatureAccess;
+  unreadSignals?: AdminUnreadSignals;
   onNavigate?: (item: AdminSection) => void;
+  mode?: "desktop" | "mobile";
 };
 
 export function Sidebar({
@@ -36,74 +38,121 @@ export function Sidebar({
   restaurantName,
   userName,
   featureAccess,
+  unreadSignals = { online: 0, tables: 0 },
   onNavigate,
+  mode = "desktop",
 }: SidebarProps) {
-  const availableNavigationGroups = navigationGroups.map((group) => ({
-    ...group,
-    items: group.items.filter((item) =>
-      item.section === "Mesas" ? featureAccess?.digitalMenuEnabled !== false : true,
-    ),
-  }));
+  const availableNavigationGroups = navigationGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        item.section === "Mesas" ? featureAccess?.digitalMenuEnabled !== false : true,
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const flattenedItems = availableNavigationGroups.flatMap((group) => group.items);
+  const totalPending = unreadSignals.online + unreadSignals.tables;
+
+  if (mode === "mobile") {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="section-label">Painel gerencial</p>
+            <p className="truncate text-base font-semibold text-[color:var(--text-strong)]">
+              {restaurantName}
+            </p>
+          </div>
+          {totalPending > 0 ? (
+            <div className="rounded-full border border-[color:var(--border-soft)] bg-white/90 px-3 py-1.5 text-xs font-semibold text-[color:var(--accent)]">
+              {totalPending} alerta(s)
+            </div>
+          ) : null}
+        </div>
+
+        <nav className="hide-scrollbar flex gap-2 overflow-x-auto pb-1">
+          {flattenedItems.map((item) => (
+            <NavButton
+              key={item.section}
+              item={item}
+              isActive={activeItem === item.section}
+              badge={resolveUnreadBadge(item.section, unreadSignals)}
+              compact
+              onClick={() => onNavigate?.(item.section)}
+            />
+          ))}
+        </nav>
+      </div>
+    );
+  }
 
   return (
-    <aside className="flex h-full w-full flex-col bg-[#171b38] text-white">
-      <div className="border-b border-white/10 px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#6f74ff,#7c3aed)] shadow-[0_12px_24px_rgba(111,116,255,0.35)]">
-            <SidebarGlyph icon="brand" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="truncate text-base font-semibold">Vellor</h2>
+    <aside className="flex h-full flex-col bg-transparent text-[color:var(--text-strong)]">
+      <div className="px-5 pb-4 pt-6">
+        <div className="panel-elevated overflow-hidden p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#d38664,#b75d3e)] text-white shadow-[0_16px_32px_rgba(183,93,62,0.24)]">
+              <SidebarGlyph icon="brand" />
             </div>
-            <p className="truncate text-xs text-slate-400">{restaurantName}</p>
+            <div className="min-w-0">
+              <p className="section-label">Insight gerencial</p>
+              <h2 className="truncate text-lg font-semibold text-[color:var(--text-strong)]">MesaPilot</h2>
+              <p className="truncate text-sm text-[color:var(--text-muted)]">{restaurantName}</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="panel-muted px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-soft)]">
+                Online
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-[color:var(--text-strong)]">{unreadSignals.online}</p>
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">Novos pedidos</p>
+            </div>
+            <div className="panel-muted px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-soft)]">
+                Mesas
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-[color:var(--text-strong)]">{unreadSignals.tables}</p>
+              <p className="mt-1 text-xs text-[color:var(--text-muted)]">Novas comandas</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col justify-between px-3 py-4">
-        <div className="space-y-4">
+      <div className="flex flex-1 flex-col justify-between px-5 pb-6">
+        <div className="space-y-6">
           {availableNavigationGroups.map((group) => (
             <div key={group.label}>
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+              <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-soft)]">
                 {group.label}
               </p>
-              <nav className="mt-2.5 space-y-1">
-                {group.items.map((item) => {
-                  const isActive = activeItem === item.section;
-
-                  return (
-                    <button
-                      key={item.section}
-                      type="button"
-                      onClick={() => onNavigate?.(item.section)}
-                      aria-current={isActive ? "page" : undefined}
-                      className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm transition focus:outline-none focus:ring-2 focus:ring-sky-400/60 ${
-                        isActive
-                          ? "bg-[linear-gradient(180deg,rgba(74,89,152,0.58),rgba(51,63,109,0.72))] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                          : "text-slate-300 hover:bg-white/5 hover:text-white"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                          isActive ? "bg-white/12" : "bg-white/5"
-                        }`}
-                      >
-                        <SidebarGlyph icon={item.icon} />
-                      </span>
-                      <span className="flex-1 font-medium">{item.title}</span>
-                      {isActive ? <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> : null}
-                    </button>
-                  );
-                })}
+              <nav className="mt-3 space-y-2">
+                {group.items.map((item) => (
+                  <NavButton
+                    key={item.section}
+                    item={item}
+                    isActive={activeItem === item.section}
+                    badge={resolveUnreadBadge(item.section, unreadSignals)}
+                    onClick={() => onNavigate?.(item.section)}
+                  />
+                ))}
               </nav>
             </div>
           ))}
         </div>
 
-        <div className="border-t border-white/10 px-1 pt-3">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f97316,#fb7185)] text-sm font-semibold">
+        <div className="space-y-4">
+          <div className="panel p-4">
+            <p className="section-label">Interacao</p>
+            <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">
+              A navegacao destaca modulos com demanda nova e deixa as filas operacionais sempre visiveis.
+            </p>
+          </div>
+
+          <div className="panel flex items-center gap-3 p-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f6c60,#4d8f81)] text-sm font-semibold text-white">
               {userName
                 .split(" ")
                 .filter(Boolean)
@@ -112,13 +161,78 @@ export function Sidebar({
                 .join("")}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{userName}</p>
-              <p className="truncate text-xs text-slate-400">{restaurantName}</p>
+              <p className="truncate text-sm font-semibold text-[color:var(--text-strong)]">{userName}</p>
+              <p className="truncate text-xs text-[color:var(--text-muted)]">Gestao conectada ao restaurante</p>
             </div>
           </div>
         </div>
       </div>
     </aside>
+  );
+}
+
+function resolveUnreadBadge(section: AdminSection, unreadSignals: AdminUnreadSignals) {
+  if (section === "PedidosOnline") {
+    return unreadSignals.online;
+  }
+
+  if (section === "Mesas") {
+    return unreadSignals.tables;
+  }
+
+  return 0;
+}
+
+function NavButton({
+  item,
+  isActive,
+  badge,
+  compact = false,
+  onClick,
+}: {
+  item: { section: AdminSection; title: string; icon: string };
+  isActive: boolean;
+  badge: number;
+  compact?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={isActive ? "page" : undefined}
+      className={`group flex items-center gap-3 text-left transition duration-200 ${
+        compact
+          ? `shrink-0 rounded-2xl border px-3 py-2.5 ${
+              isActive
+                ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]"
+                : "border-[color:var(--border-soft)] bg-white/80 text-[color:var(--text-muted)]"
+            }`
+          : `w-full rounded-[22px] border px-3 py-3 ${
+              isActive
+                ? "border-[color:rgba(183,93,62,0.18)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)] shadow-[0_16px_28px_rgba(183,93,62,0.08)]"
+                : "border-transparent bg-transparent text-[color:var(--text-muted)] hover:border-[color:var(--border-soft)] hover:bg-white/65 hover:text-[color:var(--text-strong)]"
+            }`
+      }`}
+    >
+      <span
+        className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+          isActive
+            ? "bg-white text-[color:var(--accent)] shadow-[0_10px_24px_rgba(183,93,62,0.12)]"
+            : "bg-white/85 text-[color:var(--text-muted)]"
+        }`}
+      >
+        <SidebarGlyph icon={item.icon} />
+      </span>
+      <span className="flex-1 text-sm font-semibold">{item.title}</span>
+      {badge > 0 ? (
+        <span className="rounded-full bg-[color:var(--accent)] px-2.5 py-1 text-[11px] font-semibold text-white">
+          {badge}
+        </span>
+      ) : isActive && !compact ? (
+        <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--accent)]" />
+      ) : null}
+    </button>
   );
 }
 

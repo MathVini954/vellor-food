@@ -5,8 +5,8 @@ type ProductStatusBadgeProps = {
 };
 
 const statusStyles: Record<ProductStatus, string> = {
-  Ativo: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
-  Inativo: "bg-slate-100 text-slate-600 ring-1 ring-slate-200",
+  Ativo: "bg-[color:var(--accent-green-soft)] text-[color:var(--accent-green)] ring-1 ring-[rgba(47,108,96,0.12)]",
+  Inativo: "bg-white/84 text-[color:var(--text-muted)] ring-1 ring-[color:var(--border-soft)]",
 };
 
 export function ProductStatusBadge({ status }: ProductStatusBadgeProps) {

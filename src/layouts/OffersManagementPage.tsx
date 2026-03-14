@@ -80,7 +80,7 @@ export function OffersManagementPage({
         onNavigate={onNavigate}
         action={
           <button
-            className="rounded-2xl bg-[#171b38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f1730]"
+            className="action-primary"
             type="button"
             onClick={handleCreate}
           >

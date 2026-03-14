@@ -5,8 +5,8 @@ type CustomerStatusBadgeProps = {
 };
 
 const statusStyles: Record<CustomerStatus, string> = {
-  Ativo: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100",
-  Bloqueado: "bg-rose-50 text-rose-700 ring-1 ring-rose-100",
+  Ativo: "bg-[color:var(--accent-green-soft)] text-[color:var(--accent-green)] ring-1 ring-[rgba(47,108,96,0.12)]",
+  Bloqueado: "bg-[rgba(199,73,90,0.12)] text-[#b3384c] ring-1 ring-[rgba(199,73,90,0.12)]",
 };
 
 export function CustomerStatusBadge({ status }: CustomerStatusBadgeProps) {
