@@ -8,7 +8,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [react()],
-    base: explicitBasePath || (command === "build" ? "/vellor-food/" : "/"),
+    base: explicitBasePath || "/",
     build: {
       outDir: explicitOutDir || "dist",
       emptyOutDir: true,

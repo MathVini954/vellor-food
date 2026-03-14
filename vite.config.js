@@ -8,7 +8,7 @@ export default defineConfig(function (_a) {
     var explicitOutDir = (_c = env.VITE_BUILD_OUT_DIR) === null || _c === void 0 ? void 0 : _c.trim();
     return {
         plugins: [react()],
-        base: explicitBasePath || (command === "build" ? "/vellor-food/" : "/"),
+        base: explicitBasePath || "/",
         build: {
             outDir: explicitOutDir || "dist",
             emptyOutDir: true,
