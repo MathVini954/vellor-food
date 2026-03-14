@@ -10,6 +10,19 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: configDirectory,
   },
+  async headers() {
+    return [
+      {
+        source: "/admin/index.html",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, max-age=0",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

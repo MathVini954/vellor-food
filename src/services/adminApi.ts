@@ -15,9 +15,27 @@ import type {
 } from "../types/dashboard";
 export type { AdminSession } from "../types/dashboard";
 
-const ADMIN_API_BASE_URL =
-  (import.meta.env.VITE_ADMIN_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ??
-  "http://localhost:3000/api/admin";
+function resolveAdminApiBaseUrl() {
+  const explicitBaseUrl = (import.meta.env.VITE_ADMIN_API_BASE_URL as string | undefined)?.replace(/\/$/, "");
+
+  if (explicitBaseUrl) {
+    return explicitBaseUrl;
+  }
+
+  if (typeof window === "undefined") {
+    return "http://localhost:3000/api/admin";
+  }
+
+  const { origin, hostname, port } = window.location;
+
+  if (hostname === "localhost" && port !== "3000") {
+    return "http://localhost:3000/api/admin";
+  }
+
+  return `${origin}/api/admin`;
+}
+
+const ADMIN_API_BASE_URL = resolveAdminApiBaseUrl();
 
 const AUTH_INVALID_EVENT = "admin-auth-invalid";
 
