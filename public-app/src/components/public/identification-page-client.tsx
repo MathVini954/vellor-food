@@ -70,7 +70,7 @@ export function IdentificationPageClient({
   }
 
   return (
-    <div className="px-5 pb-10 pt-5 sm:pt-6">
+    <div className="mobile-page mobile-page-top mobile-page-bottom">
       <section className="overflow-hidden rounded-[34px] bg-[#111827] text-white shadow-[0_24px_60px_rgba(15,23,42,0.28)]">
         <div className="relative">
           {restaurant.logoUrl ? (

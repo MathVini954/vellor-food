@@ -40,7 +40,7 @@ export function MyOrdersPageClient({
 }: MyOrdersPageClientProps) {
   if (experienceMode === "DINE_IN" && tableSession) {
     return (
-      <div className="px-5 pb-8 pt-5">
+      <div className="mobile-page mobile-page-top mobile-page-bottom-nav">
         <header className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
@@ -137,7 +137,7 @@ export function MyOrdersPageClient({
   }
 
   return (
-    <div className="px-5 pb-8 pt-5">
+    <div className="mobile-page mobile-page-top mobile-page-bottom-nav">
       <header className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link

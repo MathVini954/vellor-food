@@ -134,8 +134,8 @@ function persistSession(session: AdminSession | null) {
 
 function LoadingState({ title, description }: { title: string; description: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#081321_0%,_#07111d_100%)] px-4">
-      <section className="w-full max-w-lg rounded-[32px] border border-white/10 bg-white/95 p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.24)]">
+    <main className="flex min-h-screen items-center justify-center bg-white px-4">
+      <section className="w-full max-w-lg rounded-[32px] border border-[color:var(--border-soft)] bg-white p-8 text-center shadow-[var(--shadow-card)]">
         <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
         <h1 className="mt-6 text-2xl font-semibold text-slate-900">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-slate-500">{description}</p>
@@ -156,23 +156,15 @@ function ErrorState({
   onLogout: () => void;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#081321_0%,_#07111d_100%)] px-4">
-      <section className="w-full max-w-lg rounded-[32px] border border-white/10 bg-white/95 p-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.24)]">
+    <main className="flex min-h-screen items-center justify-center bg-white px-4">
+      <section className="w-full max-w-lg rounded-[32px] border border-[color:var(--border-soft)] bg-white p-8 text-center shadow-[var(--shadow-card)]">
         <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-slate-500">{description}</p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button
-            className="rounded-2xl bg-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-900"
-            type="button"
-            onClick={onRetry}
-          >
+          <button className="action-primary" type="button" onClick={onRetry}>
             Tentar novamente
           </button>
-          <button
-            className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            type="button"
-            onClick={onLogout}
-          >
+          <button className="action-secondary" type="button" onClick={onLogout}>
             Sair
           </button>
         </div>
@@ -195,7 +187,7 @@ function FloatingNotifications({
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className="iphone-toast overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(250,245,240,0.92))] px-5 py-4 shadow-[var(--shadow-float)] backdrop-blur-2xl"
+          className="iphone-toast overflow-hidden rounded-[30px] border border-[color:var(--border-soft)] bg-white px-5 py-4 shadow-[var(--shadow-float)]"
         >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -213,7 +205,7 @@ function FloatingNotifications({
                   {notification.accent === "tables" ? "MesaPilot Mesas" : "MesaPilot Pedidos"}
                 </p>
                 <p className="mt-1 text-xs font-medium text-[color:var(--text-muted)]">
-                  Agora • {formatToastTime(notification.createdAt)}
+                  Agora / {formatToastTime(notification.createdAt)}
                 </p>
               </div>
             </div>
@@ -244,7 +236,7 @@ function formatToastTime(value: string) {
 }
 
 function normalizeNotificationText(value: string) {
-  return value.replace(/â€¢|•/g, "/");
+  return value.replace(/\s*\/\s*/g, " / ");
 }
 
 function ToastBagIcon() {
@@ -405,7 +397,7 @@ export default function App() {
             ...newOnlineOrders.map((order) => ({
               id: `online-${order.id}`,
               title: `Novo pedido online ${order.id}`,
-              body: `${order.customer} • ${order.total}`,
+              body: `${order.customer} / ${order.total}`,
               accent: "online" as const,
               createdAt,
               isRead: currentSection === "PedidosOnline",
@@ -413,7 +405,7 @@ export default function App() {
             ...newTableOrders.map((order) => ({
               id: `table-${order.id}`,
               title: `${order.tableLabel ?? "Mesa"} recebeu novo pedido`,
-              body: `${order.customer} • ${order.total}`,
+              body: `${order.customer} / ${order.total}`,
               accent: "tables" as const,
               createdAt,
               isRead: currentSection === "Mesas",

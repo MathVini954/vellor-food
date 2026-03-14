@@ -17,7 +17,7 @@ export function CartFab() {
   return (
     <Link
       href={`/r/${slug}/checkout`}
-      className="fixed inset-x-3 bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-auto max-w-[430px] items-center justify-between gap-2.5 rounded-[22px] bg-[linear-gradient(135deg,#ef4444,#dc2626)] px-3 py-2.5 text-white shadow-[0_22px_40px_rgba(220,38,38,0.32)] transition hover:brightness-105 sm:gap-3 sm:rounded-[24px] sm:px-4 sm:py-3"
+      className="fixed inset-x-5 bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-auto max-w-[390px] items-center justify-between gap-2.5 rounded-[22px] bg-[linear-gradient(135deg,#ef4444,#dc2626)] px-3 py-2.5 text-white shadow-[0_22px_40px_rgba(220,38,38,0.32)] transition hover:brightness-105 sm:gap-3 sm:rounded-[24px] sm:px-4 sm:py-3"
     >
       <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/25 bg-white/15 sm:h-11 sm:w-11">

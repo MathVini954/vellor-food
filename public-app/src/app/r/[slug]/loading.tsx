@@ -6,8 +6,8 @@ function SkeletonBlock({ className }: { className: string }) {
 
 export default function RestaurantLoading() {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#fffdf9_0%,#fff6ee_52%,#fffefb_100%)] px-5 pb-24 pt-5">
-      <div className="mx-auto max-w-[430px]">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#fffdf9_0%,#fff6ee_52%,#fffefb_100%)]">
+      <div className="mobile-page mobile-page-top mobile-page-bottom-nav">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <SkeletonBlock className="h-12 w-12 rounded-full" />

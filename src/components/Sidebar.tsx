@@ -65,7 +65,7 @@ export function Sidebar({
             </p>
           </div>
           {totalPending > 0 ? (
-            <div className="rounded-full border border-[color:var(--border-soft)] bg-white/90 px-3 py-1.5 text-xs font-semibold text-[color:var(--accent)]">
+            <div className="rounded-full border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent)]">
               {totalPending} alerta(s)
             </div>
           ) : null}
@@ -88,7 +88,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full flex-col bg-transparent text-[color:var(--text-strong)]">
+    <aside className="flex h-full flex-col bg-white text-[color:var(--text-strong)]">
       <div className="px-5 pb-4 pt-6">
         <div className="panel-elevated overflow-hidden p-5">
           <div className="flex items-center gap-3">
@@ -211,7 +211,7 @@ function NavButton({
           : `w-full rounded-[22px] border px-3 py-3 ${
               isActive
                 ? "border-[color:rgba(183,93,62,0.18)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)] shadow-[0_16px_28px_rgba(183,93,62,0.08)]"
-                : "border-transparent bg-transparent text-[color:var(--text-muted)] hover:border-[color:var(--border-soft)] hover:bg-white/65 hover:text-[color:var(--text-strong)]"
+                : "border-transparent bg-transparent text-[color:var(--text-muted)] hover:border-[color:var(--border-soft)] hover:bg-[color:var(--surface-muted)] hover:text-[color:var(--text-strong)]"
             }`
       }`}
     >
@@ -219,7 +219,7 @@ function NavButton({
         className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
           isActive
             ? "bg-white text-[color:var(--accent)] shadow-[0_10px_24px_rgba(183,93,62,0.12)]"
-            : "bg-white/85 text-[color:var(--text-muted)]"
+            : "bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]"
         }`}
       >
         <SidebarGlyph icon={item.icon} />

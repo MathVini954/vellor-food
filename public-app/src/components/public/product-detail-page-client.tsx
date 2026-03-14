@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Heart, Minus, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { hasProductCustomizationConfig } from "@/lib/product-customization";
 import type { PublicProductDetail, PublicRestaurant } from "@/types/public";
 import { TopCartButton } from "./top-cart-button";
 import { useRestaurantStore } from "./restaurant-store-provider";
@@ -21,11 +22,21 @@ export function ProductDetailPageClient({
   product,
 }: ProductDetailPageClientProps) {
   const router = useRouter();
-  const { addItem, decrementItem, incrementItem, cart, isFavorite, toggleFavorite } = useRestaurantStore();
+  const hasAutoOpenedRef = useRef<string | null>(null);
+  const {
+    addItem,
+    decrementItem,
+    incrementItem,
+    openCustomizer,
+    cart,
+    isFavorite,
+    toggleFavorite,
+  } = useRestaurantStore();
   const cartQuantity = cart
     .filter((item) => item.productId === product.id)
     .reduce((total, item) => total + item.quantity, 0);
   const categoryHref = `/r/${slug}/menu/${product.categoryId}`;
+  const isCustomizable = hasProductCustomizationConfig(product.customizationConfig);
 
   useEffect(() => {
     router.prefetch(categoryHref);
@@ -35,9 +46,18 @@ export function ProductDetailPageClient({
     });
   }, [categoryHref, product.relatedProducts, router, slug]);
 
+  useEffect(() => {
+    if (!isCustomizable || hasAutoOpenedRef.current === product.id) {
+      return;
+    }
+
+    hasAutoOpenedRef.current = product.id;
+    openCustomizer(product);
+  }, [isCustomizable, openCustomizer, product]);
+
   return (
     <>
-      <div className="relative">
+      <div className="mobile-page-frame mobile-page-bottom-floating relative">
         <div className="relative aspect-[1/1.08] overflow-hidden bg-[#1f2937]">
           {product.imageUrl ? (
             <img className="h-full w-full object-cover" src={product.imageUrl} alt={product.name} />
@@ -69,7 +89,7 @@ export function ProductDetailPageClient({
           </div>
         </div>
 
-        <div className="-mt-8 rounded-t-[34px] bg-[#fff9f4] px-5 pb-32 pt-6 shadow-[0_-18px_40px_rgba(15,23,42,0.06)]">
+        <div className="-mt-8 rounded-t-[34px] bg-[#fff9f4] px-5 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-6 shadow-[0_-18px_40px_rgba(15,23,42,0.06)]">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
@@ -168,8 +188,8 @@ export function ProductDetailPageClient({
         </div>
       </div>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
-        <div className="pointer-events-auto flex w-full max-w-[398px] items-center gap-3 rounded-[28px] bg-white px-3 py-3 shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-5">
+        <div className="pointer-events-auto flex w-full max-w-[390px] items-center gap-3 rounded-[28px] bg-white px-3 py-3 shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
           {cartQuantity ? (
             <div className="flex items-center gap-2 rounded-[20px] bg-[#111827] px-3 py-2 text-white">
               <button
@@ -184,7 +204,7 @@ export function ProductDetailPageClient({
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10"
                 type="button"
                 onClick={() =>
-                  product.customizationOptions.length ? addItem(product) : incrementItem(product.id)
+                  isCustomizable ? openCustomizer(product) : incrementItem(product.id)
                 }
               >
                 <Plus size={16} />
@@ -199,7 +219,7 @@ export function ProductDetailPageClient({
           <button
             className="flex-1 rounded-[22px] bg-[#e3342f] px-5 py-4 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(227,52,47,0.28)]"
             type="button"
-            onClick={() => addItem(product)}
+            onClick={() => (isCustomizable ? openCustomizer(product) : addItem(product))}
           >
             Adicionar ao carrinho
           </button>

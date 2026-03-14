@@ -122,3 +122,20 @@ export function findCustomizationOption(
   }
   return null;
 }
+
+export function hasProductCustomizationConfig(config: ProductCustomizationConfig) {
+  return (
+    config.removableIngredients.length > 0 ||
+    config.additionalGroups.length > 0
+  );
+}
+
+export function getSelectedCustomizationExtraPrice(
+  config: ProductCustomizationConfig,
+  optionIds: string[],
+) {
+  return optionIds.reduce((total, optionId) => {
+    const found = findCustomizationOption(config, optionId);
+    return total + (found?.option.price ?? 0);
+  }, 0);
+}

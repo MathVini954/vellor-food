@@ -5,28 +5,25 @@
 @tailwind utilities;
 
 :root {
-  color: #241b17;
-  background:
-    radial-gradient(circle at top left, rgba(194, 124, 93, 0.18), transparent 34%),
-    radial-gradient(circle at top right, rgba(64, 120, 106, 0.1), transparent 28%),
-    linear-gradient(180deg, #f7f2ec 0%, #f3ede6 54%, #efe8de 100%);
-  --shell-bg: #f5efe7;
-  --surface: rgba(255, 255, 255, 0.82);
-  --surface-strong: rgba(255, 255, 255, 0.94);
-  --surface-muted: rgba(247, 241, 233, 0.88);
-  --surface-accent: rgba(183, 93, 62, 0.12);
-  --border-soft: rgba(129, 94, 72, 0.16);
-  --border-strong: rgba(129, 94, 72, 0.24);
-  --text-strong: #221b17;
-  --text-muted: #77675f;
-  --text-soft: #9b8b82;
+  color: #1f2937;
+  background: #ffffff;
+  --shell-bg: #ffffff;
+  --surface: #ffffff;
+  --surface-strong: #ffffff;
+  --surface-muted: #f8fafc;
+  --surface-accent: rgba(183, 93, 62, 0.08);
+  --border-soft: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.14);
+  --text-strong: #111827;
+  --text-muted: #667085;
+  --text-soft: #98a2b3;
   --accent: #b75d3e;
   --accent-strong: #8f462d;
   --accent-soft: rgba(183, 93, 62, 0.14);
   --accent-green: #2f6c60;
   --accent-green-soft: rgba(47, 108, 96, 0.14);
-  --shadow-card: 0 22px 48px rgba(84, 55, 34, 0.08);
-  --shadow-float: 0 30px 80px rgba(62, 38, 23, 0.14);
+  --shadow-card: 0 18px 40px rgba(15, 23, 42, 0.06);
+  --shadow-float: 0 24px 60px rgba(15, 23, 42, 0.1);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -92,8 +89,8 @@ h6 {
 
   .panel-elevated {
     @apply rounded-[32px] border;
-    border-color: rgba(255, 255, 255, 0.75);
-    background: rgba(255, 255, 255, 0.96);
+    border-color: var(--border-soft);
+    background: #ffffff;
     box-shadow: var(--shadow-float);
   }
 
@@ -117,7 +114,7 @@ h6 {
   .action-secondary {
     @apply inline-flex items-center justify-center rounded-2xl border px-4 py-3 text-sm font-semibold transition duration-200;
     border-color: var(--border-soft);
-    background: rgba(255, 255, 255, 0.8);
+    background: #ffffff;
     color: var(--text-strong);
   }
 
@@ -144,13 +141,13 @@ h6 {
   .surface-field {
     @apply w-full rounded-2xl border px-4 py-3 text-sm outline-none transition duration-200;
     border-color: var(--border-soft);
-    background: rgba(255, 255, 255, 0.74);
+    background: #ffffff;
     color: var(--text-strong);
   }
 
   .surface-field:focus {
     border-color: rgba(183, 93, 62, 0.42);
-    background: rgba(255, 255, 255, 0.96);
+    background: #ffffff;
     box-shadow: 0 0 0 4px rgba(183, 93, 62, 0.08);
   }
 

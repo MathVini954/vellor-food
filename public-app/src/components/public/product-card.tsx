@@ -2,6 +2,7 @@
 
 import { Minus, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
+import { hasProductCustomizationConfig } from "@/lib/product-customization";
 import { useRestaurantStore } from "./restaurant-store-provider";
 import type { MenuProductCard } from "@/types/public";
 
@@ -11,6 +12,7 @@ type ProductCardProps = {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem, incrementItem, decrementItem, cart } = useRestaurantStore();
+  const isCustomizable = hasProductCustomizationConfig(product.customizationConfig);
   const cartQuantity = cart
     .filter((item) => item.productId === product.id)
     .reduce((total, item) => total + item.quantity, 0);
@@ -58,7 +60,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 className="flex h-8 w-8 items-center justify-center rounded-full transition hover:bg-white/10"
                 type="button"
                 onClick={() =>
-                  product.customizationOptions.length ? addItem(product) : incrementItem(product.id)
+                  isCustomizable ? addItem(product) : incrementItem(product.id)
                 }
               >
                 <Plus size={16} />

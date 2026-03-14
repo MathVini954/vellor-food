@@ -493,7 +493,7 @@ export function CheckoutPageClient({
 
   if (!cart.length) {
     return (
-      <div className="px-5 pb-10">
+      <div className="mobile-page mobile-page-top mobile-page-bottom-sheet">
         <header className="flex items-center gap-3">
           <Link
             href={`/r/${slug}`}
@@ -530,7 +530,11 @@ export function CheckoutPageClient({
 
   return (
     <>
-      <form id="checkout-form" className="px-5 pb-[240px] sm:pb-44" onSubmit={handleSubmit}>
+      <form
+        id="checkout-form"
+        className="mobile-page mobile-page-top mobile-page-bottom-sheet"
+        onSubmit={handleSubmit}
+      >
         <header className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
@@ -871,8 +875,8 @@ export function CheckoutPageClient({
         </section>
       </form>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
-        <div className="pointer-events-auto w-full max-w-[398px] rounded-[30px] bg-white p-3 shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <div className="pointer-events-auto w-full max-w-[390px] rounded-[30px] bg-white p-3 shadow-[0_20px_50px_rgba(15,23,42,0.18)]">
           <div className="rounded-[22px] bg-[#111827] px-4 py-3 text-white">
             <div className="flex items-center justify-between text-sm text-white/70">
               <span>Subtotal</span>

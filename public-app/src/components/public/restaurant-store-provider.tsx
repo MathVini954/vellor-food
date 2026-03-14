@@ -24,6 +24,8 @@ import type {
 } from "@/types/public";
 import {
   findCustomizationOption,
+  getSelectedCustomizationExtraPrice,
+  hasProductCustomizationConfig,
   type ProductCustomizationConfig,
 } from "@/lib/product-customization";
 import { ProductCustomizationSheet } from "./product-customization-sheet";
@@ -41,8 +43,10 @@ type RestaurantStoreContextValue = {
   itemCount: number;
   subtotal: number;
   customizerProduct: MenuProductCard | null;
+  customizerQuantity: number;
   selectedOptionIds: string[];
   addItem: (product: MenuProductCard) => void;
+  openCustomizer: (product: MenuProductCard) => void;
   incrementItem: (productId: string) => void;
   decrementItem: (productId: string) => void;
   incrementCartItem: (cartItemId: string) => void;
@@ -55,6 +59,8 @@ type RestaurantStoreContextValue = {
   isFavorite: (productId: string) => boolean;
   toggleFavorite: (productId: string) => void;
   closeCustomizer: () => void;
+  incrementCustomizerQuantity: () => void;
+  decrementCustomizerQuantity: () => void;
   toggleCustomizationOption: (groupId: string, optionId: string) => void;
   confirmCustomization: () => void;
 };
@@ -166,6 +172,7 @@ export function RestaurantStoreProvider({
     );
   });
   const [customizerProduct, setCustomizerProduct] = useState<MenuProductCard | null>(null);
+  const [customizerQuantity, setCustomizerQuantity] = useState(1);
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -219,6 +226,24 @@ export function RestaurantStoreProvider({
     window.localStorage.setItem(guestStorageKey(slug), String(guestAllowed));
   }, [customer, guestAllowed, hydrated, slug]);
 
+  useEffect(() => {
+    if (typeof document === "undefined" || !customizerProduct) {
+      return;
+    }
+
+    const { body, documentElement } = document;
+    const previousBodyOverflow = body.style.overflow;
+    const previousHtmlOverflow = documentElement.style.overflow;
+
+    body.style.overflow = "hidden";
+    documentElement.style.overflow = "hidden";
+
+    return () => {
+      body.style.overflow = previousBodyOverflow;
+      documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [customizerProduct]);
+
   function setCustomer(customerValue: PublicCustomerSession | null) {
     setCustomerState(customerValue);
 
@@ -243,17 +268,13 @@ export function RestaurantStoreProvider({
     return [...removableLabels, ...additionalLabels];
   }
 
-  function buildExtraPrice(config: ProductCustomizationConfig, optionIds: string[]) {
-    return optionIds.reduce((total, optionId) => {
-      const found = findCustomizationOption(config, optionId);
-      return total + (found?.option.price ?? 0);
-    }, 0);
-  }
-
-  function commitItem(product: MenuProductCard, optionIds: string[]) {
+  function commitItem(product: MenuProductCard, optionIds: string[], quantity = 1) {
     const normalizedOptionIds = [...optionIds].sort();
     const customizations = buildSelectedSummary(product, normalizedOptionIds);
-    const extraPrice = buildExtraPrice(product.customizationConfig, normalizedOptionIds);
+    const extraPrice = getSelectedCustomizationExtraPrice(
+      product.customizationConfig,
+      normalizedOptionIds,
+    );
     const cartItemId = buildCartItemId(product.id, normalizedOptionIds);
 
     setCart((current) => {
@@ -261,7 +282,7 @@ export function RestaurantStoreProvider({
 
       if (existingItem) {
         return current.map((item) =>
-          item.id === cartItemId ? { ...item, quantity: item.quantity + 1 } : item,
+          item.id === cartItemId ? { ...item, quantity: item.quantity + quantity } : item,
         );
       }
 
@@ -277,7 +298,7 @@ export function RestaurantStoreProvider({
           imageUrl: product.imageUrl,
           price: product.price,
           extraPrice,
-          quantity: 1,
+          quantity,
           customizations,
           selectedOptionIds: normalizedOptionIds,
         },
@@ -285,17 +306,19 @@ export function RestaurantStoreProvider({
     });
   }
 
+  function openCustomizer(product: MenuProductCard) {
+    setCustomizerProduct(product);
+    setCustomizerQuantity(1);
+    setSelectedOptionIds([]);
+  }
+
   function addItem(product: MenuProductCard) {
-    if (
-      product.customizationConfig.removableIngredients.length ||
-      product.customizationConfig.additionalGroups.length
-    ) {
-      setCustomizerProduct(product);
-      setSelectedOptionIds([]);
+    if (hasProductCustomizationConfig(product.customizationConfig)) {
+      openCustomizer(product);
       return;
     }
 
-    commitItem(product, []);
+    commitItem(product, [], 1);
   }
 
   function incrementItem(productId: string) {
@@ -368,7 +391,16 @@ export function RestaurantStoreProvider({
 
   function closeCustomizer() {
     setCustomizerProduct(null);
+    setCustomizerQuantity(1);
     setSelectedOptionIds([]);
+  }
+
+  function incrementCustomizerQuantity() {
+    setCustomizerQuantity((current) => current + 1);
+  }
+
+  function decrementCustomizerQuantity() {
+    setCustomizerQuantity((current) => Math.max(1, current - 1));
   }
 
   function toggleCustomizationOption(groupId: string, optionId: string) {
@@ -405,7 +437,7 @@ export function RestaurantStoreProvider({
       return;
     }
 
-    commitItem(customizerProduct, selectedOptionIds);
+    commitItem(customizerProduct, selectedOptionIds, customizerQuantity);
     closeCustomizer();
   }
 
@@ -428,8 +460,10 @@ export function RestaurantStoreProvider({
     itemCount,
     subtotal,
     customizerProduct,
+    customizerQuantity,
     selectedOptionIds,
     addItem,
+    openCustomizer,
     incrementItem,
     decrementItem,
     incrementCartItem,
@@ -442,6 +476,8 @@ export function RestaurantStoreProvider({
     isFavorite,
     toggleFavorite,
     closeCustomizer,
+    incrementCustomizerQuantity,
+    decrementCustomizerQuantity,
     toggleCustomizationOption,
     confirmCustomization,
   };
@@ -451,7 +487,10 @@ export function RestaurantStoreProvider({
       {children}
       <ProductCustomizationSheet
         product={customizerProduct}
+        quantity={customizerQuantity}
         selectedOptionIds={selectedOptionIds}
+        onIncrementQuantity={incrementCustomizerQuantity}
+        onDecrementQuantity={decrementCustomizerQuantity}
         onToggleOption={toggleCustomizationOption}
         onClose={closeCustomizer}
         onConfirm={confirmCustomization}

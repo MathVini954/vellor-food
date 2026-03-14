@@ -17,7 +17,7 @@ export default async function OrderConfirmationPage({
   if (!order) {
     return (
       <PublicPageShell slug={slug}>
-        <div className="px-5 pb-10">
+        <div className="mobile-page mobile-page-top mobile-page-bottom">
           <section className="rounded-[30px] bg-white px-6 py-10 text-center shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
             <h1 className="text-[24px] font-bold text-slate-900">Pedido nao encontrado</h1>
             <p className="mt-3 text-sm leading-7 text-slate-500">
@@ -41,7 +41,7 @@ export default async function OrderConfirmationPage({
 
   return (
     <PublicPageShell slug={slug}>
-      <div className="px-5 pb-12 pt-2">
+      <div className="mobile-page mobile-page-top mobile-page-bottom">
         <section className="rounded-[34px] bg-[#111827] px-7 py-9 text-white shadow-[0_24px_60px_rgba(15,23,42,0.28)]">
           <div className="flex items-start gap-4">
             <span className="mt-1 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-emerald-500/18 text-emerald-300">

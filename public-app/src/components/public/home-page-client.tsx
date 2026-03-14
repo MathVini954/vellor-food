@@ -108,7 +108,7 @@ export function HomePageClient({
   }, [discovery.categories, discovery.popularProducts, router, slug]);
 
   return (
-    <div className="px-5 pb-8 pt-5 sm:pt-6">
+    <div className="mobile-page mobile-page-top mobile-page-bottom-nav">
       <header className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-[#fff1ef] shadow-[0_12px_24px_rgba(228,52,47,0.16)]">

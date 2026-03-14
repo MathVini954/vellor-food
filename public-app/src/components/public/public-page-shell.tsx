@@ -23,8 +23,10 @@ export function PublicPageShell({
       <div className="app-shell min-h-screen">
         <div className="relative min-h-screen bg-[linear-gradient(180deg,#fffdf9_0%,#fff6ee_52%,#fffefb_100%)]">
           <div className="absolute inset-x-0 top-0 h-44 bg-[radial-gradient(circle_at_top,_rgba(225,70,52,0.14),_transparent_68%)]" />
-          <div className={clsx("relative min-h-screen", withBottomNav && "pb-40", className)}>
-            {children}
+          <div className="relative min-h-screen">
+            <div className={clsx("mobile-page-frame min-h-screen", className)}>
+              {children}
+            </div>
           </div>
         </div>
       </div>

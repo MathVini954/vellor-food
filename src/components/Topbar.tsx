@@ -63,7 +63,7 @@ export function Topbar({
   }, [notifications]);
 
   return (
-    <header className="border-b border-[color:var(--border-soft)] bg-white/72 px-4 py-4 backdrop-blur-xl sm:px-6 lg:px-8">
+    <header className="border-b border-[color:var(--border-soft)] bg-white px-4 py-4 sm:px-5 lg:px-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
@@ -81,7 +81,7 @@ export function Topbar({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-3">
-          <div className="hidden rounded-[22px] border border-[color:var(--border-soft)] bg-white/78 px-4 py-3 xl:block">
+          <div className="hidden rounded-[22px] border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] px-4 py-3 xl:block">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-soft)]">
               Status do painel
             </p>
@@ -102,7 +102,7 @@ export function Topbar({
                   return next;
                 });
               }}
-              className="relative inline-flex h-12 items-center gap-3 rounded-[22px] border border-[color:var(--border-soft)] bg-white/86 px-4 text-sm font-semibold text-[color:var(--text-strong)] transition hover:-translate-y-[1px] hover:bg-white"
+              className="relative inline-flex h-12 items-center gap-3 rounded-[22px] border border-[color:var(--border-soft)] bg-white px-4 text-sm font-semibold text-[color:var(--text-strong)] transition hover:-translate-y-[1px] hover:border-[color:var(--border-strong)]"
             >
               <BellIcon />
               <span>Notificacoes</span>
@@ -114,7 +114,7 @@ export function Topbar({
             </button>
 
             {isNotificationOpen ? (
-              <div className="absolute right-0 top-[calc(100%+14px)] z-40 w-[min(92vw,380px)] rounded-[28px] border border-[color:var(--border-soft)] bg-white/97 p-4 shadow-[var(--shadow-float)]">
+              <div className="absolute right-0 top-[calc(100%+14px)] z-40 w-[min(92vw,380px)] rounded-[28px] border border-[color:var(--border-soft)] bg-white p-4 shadow-[var(--shadow-float)]">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="section-label">Centro de alertas</p>
@@ -183,7 +183,7 @@ export function Topbar({
             ) : null}
           </div>
 
-          <div className="flex items-center gap-3 rounded-[24px] border border-[color:var(--border-soft)] bg-white/86 px-3 py-2.5">
+          <div className="flex items-center gap-3 rounded-[24px] border border-[color:var(--border-soft)] bg-white px-3 py-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f6c60,#5e9b8e)] text-sm font-semibold text-white">
               {userName
                 .split(" ")

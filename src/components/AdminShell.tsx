@@ -35,9 +35,20 @@ export function AdminShell({
   const shellAside = aside ?? <DefaultAside restaurantName={restaurantName} activeSection={activeSection} />;
 
   return (
-    <main className="min-h-screen bg-[var(--shell-bg)] p-3 text-[color:var(--text-strong)] sm:p-4">
-      <div className="mx-auto flex min-h-[calc(100vh-24px)] max-w-[1680px] overflow-hidden rounded-[34px] border border-[color:var(--border-strong)] bg-white/72 shadow-[var(--shadow-float)] backdrop-blur-xl">
-        <div className="hidden w-[282px] shrink-0 border-r border-[color:var(--border-soft)] bg-[linear-gradient(180deg,rgba(251,247,242,0.92),rgba(245,238,230,0.98))] lg:block">
+    <main className="min-h-screen bg-[var(--shell-bg)] text-[color:var(--text-strong)] lg:h-screen">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:w-[282px] lg:overflow-y-auto lg:border-r lg:border-[color:var(--border-soft)] lg:bg-white">
+        <Sidebar
+          activeItem={activeSection}
+          restaurantName={restaurantName}
+          userName={userName}
+          featureAccess={featureAccess}
+          unreadSignals={unreadSignals}
+          onNavigate={onNavigate}
+        />
+      </div>
+
+      <div className="flex min-h-screen min-w-0 flex-col bg-white lg:h-screen lg:pl-[282px]">
+        <div className="border-b border-[color:var(--border-soft)] bg-white px-4 py-3 lg:hidden">
           <Sidebar
             activeItem={activeSection}
             restaurantName={restaurantName}
@@ -45,43 +56,30 @@ export function AdminShell({
             featureAccess={featureAccess}
             unreadSignals={unreadSignals}
             onNavigate={onNavigate}
+            mode="mobile"
           />
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col bg-[linear-gradient(180deg,rgba(255,255,255,0.3),rgba(255,255,255,0.08))]">
-          <div className="border-b border-[color:var(--border-soft)] bg-white/64 px-4 py-3 backdrop-blur-xl lg:hidden">
-            <Sidebar
-              activeItem={activeSection}
-              restaurantName={restaurantName}
-              userName={userName}
-              featureAccess={featureAccess}
-              unreadSignals={unreadSignals}
-              onNavigate={onNavigate}
-              mode="mobile"
-            />
-          </div>
+        <Topbar
+          restaurantName={restaurantName}
+          userName={userName}
+          pageTitle={pageTitle}
+          pageSubtitle={pageSubtitle}
+          notifications={notifications}
+          unreadSignals={unreadSignals}
+          onLogout={onLogout}
+          onNavigate={onNavigate}
+          onOpenNotifications={onOpenNotifications}
+        />
 
-          <Topbar
-            restaurantName={restaurantName}
-            userName={userName}
-            pageTitle={pageTitle}
-            pageSubtitle={pageSubtitle}
-            notifications={notifications}
-            unreadSignals={unreadSignals}
-            onLogout={onLogout}
-            onNavigate={onNavigate}
-            onOpenNotifications={onOpenNotifications}
-          />
-
-          <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <section className="min-w-0 overflow-y-auto px-4 pb-6 pt-5 sm:px-6 lg:px-8 lg:pb-8 lg:pt-6">
-              {action ? <div className="mb-5 flex justify-end">{action}</div> : null}
-              {children}
-            </section>
-            <aside className="overflow-y-auto border-t border-[color:var(--border-soft)] bg-white/44 px-4 py-5 backdrop-blur-xl sm:px-6 xl:border-l xl:border-t-0 xl:px-6 xl:py-6">
-              {shellAside}
-            </aside>
-          </div>
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="min-w-0 overflow-y-auto px-4 pb-6 pt-5 sm:px-5 lg:px-6 lg:pb-8 lg:pt-6">
+            {action ? <div className="mb-5 flex justify-end">{action}</div> : null}
+            {children}
+          </section>
+          <aside className="overflow-y-auto border-t border-[color:var(--border-soft)] bg-white px-4 py-5 sm:px-5 xl:border-l xl:border-t-0 xl:px-5 xl:py-6">
+            {shellAside}
+          </aside>
         </div>
       </div>
     </main>
