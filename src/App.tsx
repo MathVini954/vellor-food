@@ -134,8 +134,8 @@ function persistSession(session: AdminSession | null) {
 
 function LoadingState({ title, description }: { title: string; description: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-4">
-      <section className="w-full max-w-lg rounded-[32px] border border-[color:var(--border-soft)] bg-white p-8 text-center shadow-[var(--shadow-card)]">
+    <main className="flex min-h-screen items-center justify-center bg-transparent px-4">
+      <section className="w-full max-w-lg rounded-[32px] border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] p-8 text-center shadow-[var(--shadow-card)] backdrop-blur-xl">
         <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
         <h1 className="mt-6 text-2xl font-semibold text-slate-900">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-slate-500">{description}</p>
@@ -156,8 +156,8 @@ function ErrorState({
   onLogout: () => void;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-4">
-      <section className="w-full max-w-lg rounded-[32px] border border-[color:var(--border-soft)] bg-white p-8 text-center shadow-[var(--shadow-card)]">
+    <main className="flex min-h-screen items-center justify-center bg-transparent px-4">
+      <section className="w-full max-w-lg rounded-[32px] border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] p-8 text-center shadow-[var(--shadow-card)] backdrop-blur-xl">
         <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
         <p className="mt-3 text-sm leading-6 text-slate-500">{description}</p>
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
@@ -187,7 +187,7 @@ function FloatingNotifications({
       {notifications.map((notification) => (
         <div
           key={notification.id}
-          className="iphone-toast overflow-hidden rounded-[30px] border border-[color:var(--border-soft)] bg-white px-5 py-4 shadow-[var(--shadow-float)]"
+          className="iphone-toast overflow-hidden rounded-[30px] border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-5 py-4 shadow-[var(--shadow-float)] backdrop-blur-xl"
         >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">

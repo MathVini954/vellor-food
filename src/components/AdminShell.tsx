@@ -35,8 +35,8 @@ export function AdminShell({
   const shellAside = aside ?? <DefaultAside restaurantName={restaurantName} activeSection={activeSection} />;
 
   return (
-    <main className="min-h-screen bg-[var(--shell-bg)] text-[color:var(--text-strong)] lg:h-screen">
-      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:w-[282px] lg:overflow-y-auto lg:border-r lg:border-[color:var(--border-soft)] lg:bg-white">
+    <main className="min-h-screen bg-transparent text-[color:var(--text-strong)] lg:h-screen">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-40 lg:block lg:w-[282px] lg:overflow-y-auto lg:border-r lg:border-[color:var(--border-soft)] lg:bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(245,247,250,0.97))] lg:backdrop-blur-xl">
         <Sidebar
           activeItem={activeSection}
           restaurantName={restaurantName}
@@ -47,8 +47,8 @@ export function AdminShell({
         />
       </div>
 
-      <div className="flex min-h-screen min-w-0 flex-col bg-white lg:h-screen lg:pl-[282px]">
-        <div className="border-b border-[color:var(--border-soft)] bg-white px-4 py-3 lg:hidden">
+      <div className="flex min-h-screen min-w-0 flex-col bg-transparent lg:h-screen lg:pl-[282px]">
+        <div className="border-b border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-4 py-3 backdrop-blur-xl lg:hidden">
           <Sidebar
             activeItem={activeSection}
             restaurantName={restaurantName}
@@ -77,7 +77,7 @@ export function AdminShell({
             {action ? <div className="mb-5 flex justify-end">{action}</div> : null}
             {children}
           </section>
-          <aside className="overflow-y-auto border-t border-[color:var(--border-soft)] bg-white px-4 py-5 sm:px-5 xl:border-l xl:border-t-0 xl:px-5 xl:py-6">
+          <aside className="overflow-y-auto border-t border-[color:var(--border-soft)] bg-[linear-gradient(180deg,rgba(255,255,255,0.76),rgba(237,241,245,0.96))] px-4 py-5 sm:px-5 xl:border-l xl:border-t-0 xl:px-5 xl:py-6">
             {shellAside}
           </aside>
         </div>

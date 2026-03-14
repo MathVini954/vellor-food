@@ -65,7 +65,7 @@ export function Sidebar({
             </p>
           </div>
           {totalPending > 0 ? (
-            <div className="rounded-full border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent)]">
+            <div className="rounded-full border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent)]">
               {totalPending} alerta(s)
             </div>
           ) : null}
@@ -88,7 +88,7 @@ export function Sidebar({
   }
 
   return (
-    <aside className="flex h-full flex-col bg-white text-[color:var(--text-strong)]">
+    <aside className="flex h-full flex-col bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(245,247,250,0.96))] text-[color:var(--text-strong)] backdrop-blur-xl">
       <div className="px-5 pb-4 pt-6">
         <div className="panel-elevated overflow-hidden p-5">
           <div className="flex items-center gap-3">
@@ -206,7 +206,7 @@ function NavButton({
           ? `shrink-0 rounded-2xl border px-3 py-2.5 ${
               isActive
                 ? "border-[color:var(--accent)] bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]"
-                : "border-[color:var(--border-soft)] bg-white/80 text-[color:var(--text-muted)]"
+                : "border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] text-[color:var(--text-muted)]"
             }`
           : `w-full rounded-[22px] border px-3 py-3 ${
               isActive
@@ -218,7 +218,7 @@ function NavButton({
       <span
         className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
           isActive
-            ? "bg-white text-[color:var(--accent)] shadow-[0_10px_24px_rgba(183,93,62,0.12)]"
+            ? "bg-[color:var(--surface-strong)] text-[color:var(--accent)] shadow-[0_10px_24px_rgba(183,93,62,0.12)]"
             : "bg-[color:var(--surface-muted)] text-[color:var(--text-muted)]"
         }`}
       >

@@ -6,12 +6,12 @@
 
 :root {
   color: #1f2937;
-  background: #ffffff;
-  --shell-bg: #ffffff;
-  --surface: #ffffff;
-  --surface-strong: #ffffff;
-  --surface-muted: #f8fafc;
-  --surface-accent: rgba(183, 93, 62, 0.08);
+  background: #f6f7f9;
+  --shell-bg: #f3f5f7;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --surface-muted: #edf1f5;
+  --surface-accent: rgba(183, 93, 62, 0.1);
   --border-soft: rgba(15, 23, 42, 0.08);
   --border-strong: rgba(15, 23, 42, 0.14);
   --text-strong: #111827;
@@ -22,8 +22,8 @@
   --accent-soft: rgba(183, 93, 62, 0.14);
   --accent-green: #2f6c60;
   --accent-green-soft: rgba(47, 108, 96, 0.14);
-  --shadow-card: 0 18px 40px rgba(15, 23, 42, 0.06);
-  --shadow-float: 0 24px 60px rgba(15, 23, 42, 0.1);
+  --shadow-card: 0 18px 40px rgba(15, 23, 42, 0.05);
+  --shadow-float: 0 28px 64px rgba(15, 23, 42, 0.12);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -38,7 +38,12 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--shell-bg);
+  background-color: var(--shell-bg);
+  background-image:
+    radial-gradient(circle at top left, rgba(183, 93, 62, 0.08), transparent 24%),
+    radial-gradient(circle at top right, rgba(47, 108, 96, 0.08), transparent 22%),
+    linear-gradient(180deg, #fbfcfd 0%, #f1f4f7 100%);
+  background-attachment: fixed;
   color: var(--text-strong);
   font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -84,13 +89,13 @@ h6 {
   .panel-muted {
     @apply rounded-[24px] border;
     border-color: var(--border-soft);
-    background: var(--surface-muted);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.56) 0%, rgba(237, 241, 245, 0.96) 100%);
   }
 
   .panel-elevated {
     @apply rounded-[32px] border;
     border-color: var(--border-soft);
-    background: #ffffff;
+    background: var(--surface-strong);
     box-shadow: var(--shadow-float);
   }
 
@@ -114,14 +119,14 @@ h6 {
   .action-secondary {
     @apply inline-flex items-center justify-center rounded-2xl border px-4 py-3 text-sm font-semibold transition duration-200;
     border-color: var(--border-soft);
-    background: #ffffff;
+    background: var(--surface-strong);
     color: var(--text-strong);
   }
 
   .action-secondary:hover {
     transform: translateY(-1px);
     border-color: var(--border-strong);
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
   }
 
   .action-warning {
@@ -141,13 +146,13 @@ h6 {
   .surface-field {
     @apply w-full rounded-2xl border px-4 py-3 text-sm outline-none transition duration-200;
     border-color: var(--border-soft);
-    background: #ffffff;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(247, 248, 250, 0.98) 100%);
     color: var(--text-strong);
   }
 
   .surface-field:focus {
     border-color: rgba(183, 93, 62, 0.42);
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.99);
     box-shadow: 0 0 0 4px rgba(183, 93, 62, 0.08);
   }
 

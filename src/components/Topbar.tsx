@@ -63,7 +63,7 @@ export function Topbar({
   }, [notifications]);
 
   return (
-    <header className="border-b border-[color:var(--border-soft)] bg-white px-4 py-4 sm:px-5 lg:px-6">
+    <header className="border-b border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-4 py-4 backdrop-blur-xl sm:px-5 lg:px-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
@@ -73,7 +73,7 @@ export function Topbar({
           </div>
           <div className="mt-2 flex flex-wrap items-end gap-3">
             <h1 className="text-3xl font-semibold text-[color:var(--text-strong)]">{pageTitle}</h1>
-            <div className="rounded-full border border-[color:var(--border-soft)] bg-white/85 px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-green)]">
+            <div className="rounded-full border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] px-3 py-1.5 text-xs font-semibold text-[color:var(--accent-green)]">
               Operacao sincronizada
             </div>
           </div>
@@ -102,7 +102,7 @@ export function Topbar({
                   return next;
                 });
               }}
-              className="relative inline-flex h-12 items-center gap-3 rounded-[22px] border border-[color:var(--border-soft)] bg-white px-4 text-sm font-semibold text-[color:var(--text-strong)] transition hover:-translate-y-[1px] hover:border-[color:var(--border-strong)]"
+              className="relative inline-flex h-12 items-center gap-3 rounded-[22px] border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-4 text-sm font-semibold text-[color:var(--text-strong)] shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:-translate-y-[1px] hover:border-[color:var(--border-strong)] hover:bg-white"
             >
               <BellIcon />
               <span>Notificacoes</span>
@@ -114,7 +114,7 @@ export function Topbar({
             </button>
 
             {isNotificationOpen ? (
-              <div className="absolute right-0 top-[calc(100%+14px)] z-40 w-[min(92vw,380px)] rounded-[28px] border border-[color:var(--border-soft)] bg-white p-4 shadow-[var(--shadow-float)]">
+              <div className="absolute right-0 top-[calc(100%+14px)] z-40 w-[min(92vw,380px)] rounded-[28px] border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] p-4 shadow-[var(--shadow-float)] backdrop-blur-2xl">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="section-label">Centro de alertas</p>
@@ -139,7 +139,7 @@ export function Topbar({
                           onNavigate(notification.accent === "online" ? "PedidosOnline" : "Mesas");
                           setIsNotificationOpen(false);
                         }}
-                        className="w-full rounded-[24px] border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] p-4 text-left transition hover:border-[color:var(--border-strong)] hover:bg-white"
+                        className="w-full rounded-[24px] border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] p-4 text-left transition hover:border-[color:var(--border-strong)] hover:bg-[color:var(--surface-strong)]"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex min-w-0 gap-3">
@@ -183,7 +183,7 @@ export function Topbar({
             ) : null}
           </div>
 
-          <div className="flex items-center gap-3 rounded-[24px] border border-[color:var(--border-soft)] bg-white px-3 py-2.5">
+          <div className="flex items-center gap-3 rounded-[24px] border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-3 py-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f6c60,#5e9b8e)] text-sm font-semibold text-white">
               {userName
                 .split(" ")
