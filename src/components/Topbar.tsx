@@ -63,7 +63,7 @@ export function Topbar({
   }, [notifications]);
 
   return (
-    <header className="border-b border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-4 py-4 backdrop-blur-xl sm:px-5 lg:px-6">
+    <header className="relative z-[70] border-b border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-4 py-4 backdrop-blur-xl sm:px-5 lg:px-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
@@ -88,7 +88,7 @@ export function Topbar({
             <p className="mt-1 text-sm font-medium text-[color:var(--text-strong)]">{latestUpdateLabel}</p>
           </div>
 
-          <div className="relative" ref={notificationRef}>
+          <div className="relative z-[80]" ref={notificationRef}>
             <button
               type="button"
               onClick={() => {
@@ -114,7 +114,7 @@ export function Topbar({
             </button>
 
             {isNotificationOpen ? (
-              <div className="absolute right-0 top-[calc(100%+14px)] z-40 w-[min(92vw,380px)] rounded-[28px] border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] p-4 shadow-[var(--shadow-float)] backdrop-blur-2xl">
+              <div className="absolute right-0 top-[calc(100%+14px)] z-[90] w-[min(92vw,380px)] rounded-[28px] border border-[color:var(--border-soft)] bg-[color:rgba(255,255,255,0.96)] p-4 shadow-[var(--shadow-float)] backdrop-blur-2xl">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="section-label">Centro de alertas</p>
@@ -153,23 +153,47 @@ export function Topbar({
                                 {notification.title}
                               </p>
                               <p className="mt-1 text-sm leading-6 text-[color:var(--text-muted)]">
-                                {notification.body.replace(/â€¢|•/g, "/")}
+                                {notification.orderPreview
+                                  ? `${notification.orderPreview.orderId} / ${notification.orderPreview.customer}`
+                                  : notification.body}
                               </p>
+                              {notification.orderPreview ? (
+                                <p className="mt-2 text-xs leading-5 text-[color:var(--text-muted)]">
+                                  {notification.orderPreview.items.join(" / ")}
+                                  {notification.orderPreview.remainingItems > 0
+                                    ? ` / +${notification.orderPreview.remainingItems} item(ns)`
+                                    : ""}
+                                </p>
+                              ) : null}
                             </div>
                           </div>
                           <span className="shrink-0 text-xs font-medium text-[color:var(--text-soft)]">
                             {formatNotificationTime(notification.createdAt)}
                           </span>
                         </div>
-                        <div className="mt-3 flex items-center justify-between gap-3">
-                          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-soft)]">
-                            {notification.accent === "online" ? "Pedidos online" : "Mesas"}
-                          </span>
-                          {!notification.isRead ? (
-                            <span className="rounded-full bg-[color:var(--accent-soft)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--accent-strong)]">
-                              Novo
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[color:var(--text-soft)]">
+                              {notification.accent === "online" ? "Pedidos online" : "Mesas"}
                             </span>
-                          ) : null}
+                            {notification.orderPreview ? (
+                              <span className="rounded-full bg-[color:var(--surface-strong)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-muted)]">
+                                {notification.orderPreview.contextLabel}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {notification.orderPreview ? (
+                              <span className="text-sm font-semibold text-[color:var(--text-strong)]">
+                                {notification.orderPreview.total}
+                              </span>
+                            ) : null}
+                            {!notification.isRead ? (
+                              <span className="rounded-full bg-[color:var(--accent-soft)] px-2.5 py-1 text-[11px] font-semibold text-[color:var(--accent-strong)]">
+                                Novo
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </button>
                     ))}

@@ -7,15 +7,15 @@ type OrderDetailsPanelProps = {
 
 export function OrderDetailsPanel({ order }: OrderDetailsPanelProps) {
   return (
-    <aside className="panel p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <aside className="panel min-w-0 max-w-full overflow-hidden p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="section-label">Detalhes do pedido</p>
-          <h2 className="mt-2 text-xl font-semibold text-[color:var(--text-strong)]">
+          <h2 className="mt-2 break-all text-xl font-semibold leading-tight text-[color:var(--text-strong)]">
             {order ? order.id : "Selecione um pedido"}
           </h2>
         </div>
-        {order ? <StatusBadge status={order.status} /> : null}
+        {order ? <div className="shrink-0"><StatusBadge status={order.status} /></div> : null}
       </div>
 
       {order ? (
@@ -23,13 +23,13 @@ export function OrderDetailsPanel({ order }: OrderDetailsPanelProps) {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
             <div className="panel-muted p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-soft)]">Cliente</p>
-              <p className="mt-2 font-semibold text-[color:var(--text-strong)]">{order.customer}</p>
-              <p className="mt-1 text-sm text-[color:var(--text-muted)]">{order.phone}</p>
+              <p className="mt-2 break-words font-semibold text-[color:var(--text-strong)]">{order.customer}</p>
+              <p className="mt-1 break-all text-sm text-[color:var(--text-muted)]">{order.phone}</p>
             </div>
             <div className="panel-muted p-4">
               <p className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-soft)]">Horario</p>
               <p className="mt-2 font-semibold text-[color:var(--text-strong)]">{order.time}</p>
-              <p className="mt-1 text-sm text-[color:var(--text-muted)]">{order.address}</p>
+              <p className="mt-1 break-words text-sm text-[color:var(--text-muted)]">{order.address}</p>
             </div>
           </div>
 
@@ -39,10 +39,10 @@ export function OrderDetailsPanel({ order }: OrderDetailsPanelProps) {
               {order.items.map((item) => (
                 <div
                   key={`${order.id}-${item.name}`}
-                  className="flex items-center justify-between rounded-2xl border border-[color:var(--border-soft)] bg-white/78 px-4 py-3"
+                  className="flex min-w-0 items-start justify-between gap-3 rounded-2xl border border-[color:var(--border-soft)] bg-white/78 px-4 py-3"
                 >
-                  <span className="text-sm text-[color:var(--text-muted)]">{item.name}</span>
-                  <span className="text-sm font-semibold text-[color:var(--text-strong)]">{item.quantity}x</span>
+                  <span className="min-w-0 flex-1 break-words text-sm text-[color:var(--text-muted)]">{item.name}</span>
+                  <span className="shrink-0 text-sm font-semibold text-[color:var(--text-strong)]">{item.quantity}x</span>
                 </div>
               ))}
             </div>

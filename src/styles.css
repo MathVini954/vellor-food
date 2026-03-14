@@ -78,6 +78,18 @@ h6 {
   }
 }
 
+@keyframes toast-timer {
+  0% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  100% {
+    opacity: 0.35;
+    transform: scaleX(0);
+  }
+}
+
 @layer components {
   .panel {
     @apply rounded-[28px] border backdrop-blur-xl;
@@ -167,5 +179,10 @@ h6 {
 
   .iphone-toast {
     animation: toast-enter 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .toast-timer {
+    transform-origin: left center;
+    animation: toast-timer 5200ms linear forwards;
   }
 }

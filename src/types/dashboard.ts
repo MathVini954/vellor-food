@@ -9,6 +9,16 @@ export type Metric = {
 
 export type AdminNotificationTone = "online" | "tables";
 
+export type AdminNotificationOrderPreview = {
+  orderId: string;
+  customer: string;
+  total: string;
+  time: string;
+  contextLabel: string;
+  items: string[];
+  remainingItems: number;
+};
+
 export type AdminNotification = {
   id: string;
   title: string;
@@ -16,6 +26,7 @@ export type AdminNotification = {
   accent: AdminNotificationTone;
   createdAt: string;
   isRead: boolean;
+  orderPreview: AdminNotificationOrderPreview | null;
 };
 
 export type AdminUnreadSignals = {

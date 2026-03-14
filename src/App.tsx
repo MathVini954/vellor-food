@@ -3,8 +3,10 @@ import { AdminLayoutContext } from "./components/AdminLayoutContext";
 import type {
   AdminInitialSetup,
   AdminNotification,
+  AdminNotificationTone,
   AdminSection,
   Offer,
+  Order,
   OrderStatus,
   RestaurantSettings,
   AdminUnreadSignals,
@@ -47,6 +49,7 @@ const AUTH_STORAGE_KEY = "restaurant-auth-session";
 const FALLBACK_PLATFORM_NAME = "MesaPilot Gestao";
 const PUBLIC_SIGNUP_ENABLED = import.meta.env.VITE_ALLOW_PUBLIC_RESTAURANT_SIGNUP === "true";
 const INITIAL_SETUP_PATH = "/primeiro-acesso";
+const TOAST_LIFETIME_MS = 5200;
 
 const adminRouteSegments = {
   Dashboard: "dashboard",
@@ -183,16 +186,16 @@ function FloatingNotifications({
   }
 
   return (
-    <div className="pointer-events-none fixed right-4 top-4 z-[120] flex w-full max-w-[360px] flex-col gap-3 sm:right-6 sm:top-6">
-      {notifications.map((notification) => (
-        <div
-          key={notification.id}
-          className="iphone-toast overflow-hidden rounded-[30px] border border-[color:var(--border-soft)] bg-[color:var(--surface-strong)] px-5 py-4 shadow-[var(--shadow-float)] backdrop-blur-xl"
-        >
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
+    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-0 z-[180] flex justify-end p-4 sm:p-6">
+      <div className="flex w-full max-w-[420px] flex-col gap-3">
+        {notifications.map((notification) => (
+          <article
+            key={notification.id}
+            className="iphone-toast pointer-events-auto overflow-hidden rounded-[30px] border border-[color:var(--border-soft)] bg-[color:rgba(255,255,255,0.96)] px-5 py-4 shadow-[0_30px_80px_rgba(15,23,42,0.18)] backdrop-blur-2xl"
+          >
+            <div className="flex items-start gap-4">
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-[14px] text-white ${
+                className={`mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] text-white shadow-[0_16px_32px_rgba(15,23,42,0.16)] ${
                   notification.accent === "tables"
                     ? "bg-[linear-gradient(135deg,#2f6c60,#58a08f)]"
                     : "bg-[linear-gradient(135deg,#d38664,#b75d3e)]"
@@ -200,24 +203,85 @@ function FloatingNotifications({
               >
                 {notification.accent === "tables" ? <ToastTableIcon /> : <ToastBagIcon />}
               </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[color:var(--text-soft)]">
-                  {notification.accent === "tables" ? "MesaPilot Mesas" : "MesaPilot Pedidos"}
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[color:var(--text-soft)]">
+                      {notification.accent === "tables" ? "Novo pedido da mesa" : "Novo pedido online"}
+                    </p>
+                    <h3 className="mt-2 truncate text-base font-semibold text-[color:var(--text-strong)]">
+                      {notification.orderPreview?.orderId ?? notification.title}
+                    </h3>
+                  </div>
+                  <span className="shrink-0 text-xs font-medium text-[color:var(--text-soft)]">
+                    {formatToastTime(notification.createdAt)}
+                  </span>
+                </div>
+
+                <p className="mt-1 text-sm font-medium text-[color:var(--text-strong)]">
+                  {notification.orderPreview?.customer ?? normalizeNotificationText(notification.body)}
                 </p>
-                <p className="mt-1 text-xs font-medium text-[color:var(--text-muted)]">
-                  Agora / {formatToastTime(notification.createdAt)}
-                </p>
+
+                {notification.orderPreview ? (
+                  <div className="mt-3 space-y-2">
+                    {notification.orderPreview.items.map((item) => (
+                      <div
+                        key={`${notification.id}-${item}`}
+                        className="rounded-2xl border border-[color:var(--border-soft)] bg-[color:var(--surface-muted)] px-3 py-2 text-sm text-[color:var(--text-muted)]"
+                      >
+                        {item}
+                      </div>
+                    ))}
+                    {notification.orderPreview.remainingItems > 0 ? (
+                      <p className="text-xs font-medium text-[color:var(--text-muted)]">
+                        +{notification.orderPreview.remainingItems} item(ns) neste pedido
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-sm leading-6 text-[color:var(--text-muted)]">
+                    {normalizeNotificationText(notification.body)}
+                  </p>
+                )}
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                        notification.accent === "tables"
+                          ? "bg-[color:var(--accent-green-soft)] text-[color:var(--accent-green)]"
+                          : "bg-[color:var(--accent-soft)] text-[color:var(--accent-strong)]"
+                      }`}
+                    >
+                      {notification.orderPreview?.contextLabel ??
+                        (notification.accent === "tables" ? "Mesas" : "Pedidos online")}
+                    </span>
+                    {notification.orderPreview ? (
+                      <span className="text-xs font-medium text-[color:var(--text-muted)]">
+                        {notification.orderPreview.time}
+                      </span>
+                    ) : null}
+                  </div>
+                  {notification.orderPreview ? (
+                    <span className="text-base font-semibold text-[color:var(--text-strong)]">
+                      {notification.orderPreview.total}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
-            <div className="h-1.5 w-12 rounded-full bg-black/6" />
-          </div>
 
-          <h3 className="text-sm font-semibold text-[color:var(--text-strong)]">{notification.title}</h3>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--text-muted)]">
-            {normalizeNotificationText(notification.body)}
-          </p>
-        </div>
-      ))}
+            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-black/6">
+              <div
+                className={`toast-timer h-full rounded-full ${
+                  notification.accent === "tables" ? "bg-[color:var(--accent-green)]" : "bg-[color:var(--accent)]"
+                }`}
+              />
+            </div>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }
@@ -237,6 +301,32 @@ function formatToastTime(value: string) {
 
 function normalizeNotificationText(value: string) {
   return value.replace(/\s*\/\s*/g, " / ");
+}
+
+function buildNotificationFromOrder(
+  order: Order,
+  accent: AdminNotificationTone,
+  isRead: boolean,
+): AdminNotification {
+  const itemPreview = order.items.slice(0, 2).map((item) => `${item.quantity}x ${item.name}`);
+
+  return {
+    id: `${accent === "online" ? "online" : "table"}-${order.id}`,
+    title: accent === "online" ? `Novo pedido online ${order.id}` : `${order.tableLabel ?? "Mesa"} recebeu novo pedido`,
+    body: `${order.customer} / ${order.total}`,
+    accent,
+    createdAt: new Date().toISOString(),
+    isRead,
+    orderPreview: {
+      orderId: order.id,
+      customer: order.customer,
+      total: order.total,
+      time: order.time,
+      contextLabel: accent === "tables" ? order.tableLabel ?? "Mesa" : order.orderTypeLabel,
+      items: itemPreview,
+      remainingItems: Math.max(order.items.length - itemPreview.length, 0),
+    },
+  };
 }
 
 function ToastBagIcon() {
@@ -392,24 +482,13 @@ export default function App() {
         );
 
         if (newOnlineOrders.length || newTableOrders.length) {
-          const createdAt = new Date().toISOString();
           const nextNotifications: AdminNotification[] = [
-            ...newOnlineOrders.map((order) => ({
-              id: `online-${order.id}`,
-              title: `Novo pedido online ${order.id}`,
-              body: `${order.customer} / ${order.total}`,
-              accent: "online" as const,
-              createdAt,
-              isRead: currentSection === "PedidosOnline",
-            })),
-            ...newTableOrders.map((order) => ({
-              id: `table-${order.id}`,
-              title: `${order.tableLabel ?? "Mesa"} recebeu novo pedido`,
-              body: `${order.customer} / ${order.total}`,
-              accent: "tables" as const,
-              createdAt,
-              isRead: currentSection === "Mesas",
-            })),
+            ...newOnlineOrders.map((order) =>
+              buildNotificationFromOrder(order, "online", currentSection === "PedidosOnline"),
+            ),
+            ...newTableOrders.map((order) =>
+              buildNotificationFromOrder(order, "tables", currentSection === "Mesas"),
+            ),
           ];
 
           setToastNotifications((current) => [...nextNotifications, ...current].slice(0, 3));
@@ -421,7 +500,7 @@ export default function App() {
                   !nextNotifications.some((candidate) => candidate.id === notification.id),
               ),
             );
-          }, 4200);
+          }, TOAST_LIFETIME_MS);
 
           setUnreadSignals((current) => ({
             online:

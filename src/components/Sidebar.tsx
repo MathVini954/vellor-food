@@ -26,7 +26,6 @@ const navigationGroups: Array<{
 type SidebarProps = {
   activeItem?: AdminSection;
   restaurantName: string;
-  userName: string;
   featureAccess?: FeatureAccess;
   unreadSignals?: AdminUnreadSignals;
   onNavigate?: (item: AdminSection) => void;
@@ -36,7 +35,6 @@ type SidebarProps = {
 export function Sidebar({
   activeItem = "Dashboard",
   restaurantName,
-  userName,
   featureAccess,
   unreadSignals = { online: 0, tables: 0 },
   onNavigate,
@@ -121,7 +119,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col justify-between px-5 pb-6">
+      <div className="flex flex-1 flex-col px-5 pb-6">
         <div className="space-y-6">
           {availableNavigationGroups.map((group) => (
             <div key={group.label}>
@@ -141,30 +139,6 @@ export function Sidebar({
               </nav>
             </div>
           ))}
-        </div>
-
-        <div className="space-y-4">
-          <div className="panel p-4">
-            <p className="section-label">Interacao</p>
-            <p className="mt-3 text-sm leading-6 text-[color:var(--text-muted)]">
-              A navegacao destaca modulos com demanda nova e deixa as filas operacionais sempre visiveis.
-            </p>
-          </div>
-
-          <div className="panel flex items-center gap-3 p-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#2f6c60,#4d8f81)] text-sm font-semibold text-white">
-              {userName
-                .split(" ")
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((value) => value[0])
-                .join("")}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[color:var(--text-strong)]">{userName}</p>
-              <p className="truncate text-xs text-[color:var(--text-muted)]">Gestao conectada ao restaurante</p>
-            </div>
-          </div>
         </div>
       </div>
     </aside>
