@@ -111,6 +111,39 @@
   </script>
 </head>
 <body>
+  <!-- Ícones (traço) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-building" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5A5.5 5.5 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6M10 22h4"/></symbol>
+    <symbol id="i-idcard" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M14 10h4M14 14h4M5 16c.6-1 1.6-1.5 3-1.5s2.4.5 3 1.5"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16v-4M12 16V8M17 16v-7"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+    <symbol id="i-trend" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    <symbol id="i-utensils" viewBox="0 0 24 24"><path d="M3 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3Zm0 0v7"/></symbol>
+    <symbol id="i-hardhat" viewBox="0 0 24 24"><path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2Z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5M4 15v-3a6 6 0 0 1 6-6M14 6a6 6 0 0 1 6 6v3"/></symbol>
+    <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0L5 7ZM19 7l-3 7a3 3 0 0 0 6 0l-3-7Z"/></symbol>
+    <symbol id="i-factory" viewBox="0 0 24 24"><path d="M2 20V8l6 4V8l6 4V4h8v16Z"/><path d="M6 16h2M11 16h2M16 16h2"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.5 19 2c1 2 2 4.2 2 8 0 5.5-4.8 10-10 10Z"/><path d="M2 21c0-3 1.9-5.4 5.1-6C9.5 14.5 12 13 13 12"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></symbol>
+    <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></symbol>
+    <symbol id="i-cap" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  </svg>
 
   <!-- ===================== HEADER ===================== -->
   <header class="header" id="topo">
@@ -149,7 +182,7 @@
 
       <div class="container hero__grid">
         <div class="hero__content">
-          <span class="badge reveal">📍 Contabilidade em Vitória de Santo Antão - PE</span>
+          <span class="badge reveal"><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg> Contabilidade em Vitória de Santo Antão - PE</span>
           <h1 class="hero__title reveal">
             Transformamos <span class="hl">burocracia</span><br>
             em <span class="typed" id="typed">crescimento</span><span class="caret" aria-hidden="true">|</span>
@@ -166,9 +199,9 @@
             <a href="#servicos" class="btn btn--ghost btn--lg">Ver serviços</a>
           </div>
           <ul class="hero__trust reveal">
-            <li>✔ +17 anos de experiência</li>
-            <li>✔ Atendimento humano e próximo</li>
-            <li>✔ Atendemos todos os segmentos</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> +17 anos de experiência</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Atendimento humano e próximo</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Atendemos todos os segmentos</li>
           </ul>
         </div>
 
@@ -179,18 +212,18 @@
               <span class="dot"></span><span class="dot"></span><span class="dot"></span>
               <strong>Sua empresa em dia</strong>
             </div>
-            <div class="panel__row ok"><span>Impostos do mês</span><b>Pagos ✓</b></div>
-            <div class="panel__row ok"><span>Folha de pagamento</span><b>Enviada ✓</b></div>
-            <div class="panel__row ok"><span>Certidões negativas</span><b>Regulares ✓</b></div>
+            <div class="panel__row ok"><span>Impostos do mês</span><b>Pagos</b></div>
+            <div class="panel__row ok"><span>Folha de pagamento</span><b>Enviada</b></div>
+            <div class="panel__row ok"><span>Certidões negativas</span><b>Regulares</b></div>
             <div class="panel__chart">
               <span style="--h:35%"></span><span style="--h:52%"></span><span style="--h:44%"></span>
               <span style="--h:68%"></span><span style="--h:60%"></span><span style="--h:82%"></span><span style="--h:95%"></span>
             </div>
-            <div class="panel__foot">Crescimento com segurança fiscal 📈</div>
+            <div class="panel__foot">Crescimento com segurança fiscal</div>
           </div>
-          <div class="chip chip--1 float">🧾 Nota fiscal emitida</div>
-          <div class="chip chip--2 float float--delay">✅ Obrigações entregues</div>
-          <div class="chip chip--3 float">🏢 Empresa aberta!</div>
+          <div class="chip chip--1 float"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Nota fiscal emitida</div>
+          <div class="chip chip--2 float float--delay"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Obrigações entregues</div>
+          <div class="chip chip--3 float"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg> Empresa aberta</div>
         </div>
       </div>
     </section>
@@ -198,12 +231,12 @@
     <!-- ===================== FAIXA DE NICHOS (marquee) ===================== -->
     <section class="marquee" aria-label="Segmentos atendidos">
       <div class="marquee__track">
-        <span>Comércio</span><span>★</span><span>MEI</span><span>★</span><span>Prestadores de serviço</span><span>★</span>
-        <span>Clínicas e consultórios</span><span>★</span><span>Restaurantes</span><span>★</span><span>Construção civil</span><span>★</span>
-        <span>Indústria</span><span>★</span><span>Profissionais liberais</span><span>★</span><span>Agronegócio</span><span>★</span>
-        <span>Comércio</span><span>★</span><span>MEI</span><span>★</span><span>Prestadores de serviço</span><span>★</span>
-        <span>Clínicas e consultórios</span><span>★</span><span>Restaurantes</span><span>★</span><span>Construção civil</span><span>★</span>
-        <span>Indústria</span><span>★</span><span>Profissionais liberais</span><span>★</span><span>Agronegócio</span><span>★</span>
+        <span>Comércio</span><i class="sep" aria-hidden="true"></i><span>MEI</span><i class="sep" aria-hidden="true"></i><span>Prestadores de serviço</span><i class="sep" aria-hidden="true"></i>
+        <span>Clínicas e consultórios</span><i class="sep" aria-hidden="true"></i><span>Restaurantes</span><i class="sep" aria-hidden="true"></i><span>Construção civil</span><i class="sep" aria-hidden="true"></i>
+        <span>Indústria</span><i class="sep" aria-hidden="true"></i><span>Profissionais liberais</span><i class="sep" aria-hidden="true"></i><span>Agronegócio</span><i class="sep" aria-hidden="true"></i>
+        <span>Comércio</span><i class="sep" aria-hidden="true"></i><span>MEI</span><i class="sep" aria-hidden="true"></i><span>Prestadores de serviço</span><i class="sep" aria-hidden="true"></i>
+        <span>Clínicas e consultórios</span><i class="sep" aria-hidden="true"></i><span>Restaurantes</span><i class="sep" aria-hidden="true"></i><span>Construção civil</span><i class="sep" aria-hidden="true"></i>
+        <span>Indústria</span><i class="sep" aria-hidden="true"></i><span>Profissionais liberais</span><i class="sep" aria-hidden="true"></i><span>Agronegócio</span><i class="sep" aria-hidden="true"></i>
       </div>
     </section>
 
@@ -229,63 +262,63 @@
 
         <div class="cards">
           <article class="card reveal">
-            <div class="card__icon">🚀</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-building"/></svg></div>
             <h3>Abertura de empresas</h3>
             <p>Escolhemos o melhor enquadramento, registramos o CNPJ e deixamos tudo pronto para você começar a faturar.</p>
             <a href="#" data-wa="Olá! Quero abrir uma empresa." class="card__link">Quero abrir minha empresa →</a>
           </article>
 
           <article class="card reveal">
-            <div class="card__icon">💡</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-bulb"/></svg></div>
             <h3>Consultoria empresarial</h3>
             <p>Orientação contábil para decisões do dia a dia: pró-labore, distribuição de lucros, contratação e expansão.</p>
             <a href="#" data-wa="Olá! Gostaria de uma consultoria contábil." class="card__link">Quero uma consultoria →</a>
           </article>
 
           <article class="card reveal">
-            <div class="card__icon">💼</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-idcard"/></svg></div>
             <h3>Contabilidade para MEI</h3>
             <p>DAS, declaração anual e orientação para crescer. E quando chegar a hora, fazemos a migração para ME.</p>
             <a href="#" data-wa="Olá! Sou MEI e preciso de ajuda." class="card__link">Sou MEI →</a>
           </article>
 
           <article class="card reveal">
-            <div class="card__icon">📊</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-chart"/></svg></div>
             <h3>Contabilidade empresarial</h3>
             <p>Balanços, demonstrativos e escrituração contábil completa para Simples Nacional, Lucro Presumido e Real.</p>
             <a href="#" data-wa="Olá! Preciso de contabilidade para minha empresa." class="card__link">Falar com especialista →</a>
           </article>
 
           <article class="card reveal">
-            <div class="card__icon">🧾</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-receipt"/></svg></div>
             <h3>Fiscal e tributário</h3>
             <p>Apuração de impostos, obrigações acessórias e notas fiscais em dia, evitando multas e surpresas.</p>
             <a href="#" data-wa="Olá! Preciso de ajuda com a parte fiscal." class="card__link">Organizar meus impostos →</a>
           </article>
 
           <article class="card reveal">
-            <div class="card__icon">👥</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-users"/></svg></div>
             <h3>Departamento pessoal</h3>
             <p>Folha de pagamento, admissões, férias, rescisões e eSocial, sempre atualizados com a legislação trabalhista.</p>
             <a href="#" data-wa="Olá! Preciso de departamento pessoal." class="card__link">Cuidar da minha equipe →</a>
           </article>
 
           <article class="card reveal">
-            <div class="card__icon">🎯</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-trend"/></svg></div>
             <h3>Planejamento tributário</h3>
             <p>Analisamos o seu negócio para pagar só o que é justo, dentro da lei. Economia que vira investimento.</p>
             <a href="#" data-wa="Olá! Quero um planejamento tributário." class="card__link">Quero pagar menos imposto →</a>
           </article>
 
           <article class="card reveal">
-            <div class="card__icon">🛡️</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg></div>
             <h3>Regularização e certidões</h3>
             <p>Empresa com pendências? Regularizamos débitos, parcelamentos e emitimos certidões negativas.</p>
             <a href="#" data-wa="Olá! Preciso regularizar minha empresa." class="card__link">Regularizar agora →</a>
           </article>
 
           <article class="card reveal">
-            <div class="card__icon">🏠</div>
+            <div class="card__icon"><svg class="ico" aria-hidden="true"><use href="#i-file"/></svg></div>
             <h3>Imposto de Renda</h3>
             <p>Declaração de IR para pessoa física e sócios, com análise para evitar malha fina e aproveitar deduções.</p>
             <a href="#" data-wa="Olá! Quero declarar meu Imposto de Renda." class="card__link">Declarar meu IR →</a>
@@ -347,10 +380,10 @@
           </ul>
         </div>
         <div class="feature-grid">
-          <div class="feature reveal"><span>⚡</span><h3>Respostas rápidas</h3><p>Atendimento ágil pelo WhatsApp.</p></div>
-          <div class="feature reveal"><span>🔒</span><h3>Sigilo total</h3><p>Seus dados tratados com responsabilidade.</p></div>
-          <div class="feature reveal"><span>📅</span><h3>Prazos em dia</h3><p>Nada de multa por atraso.</p></div>
-          <div class="feature reveal"><span>🤝</span><h3>Parceria real</h3><p>Orientação para decisões melhores.</p></div>
+          <div class="feature reveal"><svg class="ico feature__ico" aria-hidden="true"><use href="#i-zap"/></svg><h3>Respostas rápidas</h3><p>Atendimento ágil pelo WhatsApp.</p></div>
+          <div class="feature reveal"><svg class="ico feature__ico" aria-hidden="true"><use href="#i-lock"/></svg><h3>Sigilo total</h3><p>Seus dados tratados com responsabilidade.</p></div>
+          <div class="feature reveal"><svg class="ico feature__ico" aria-hidden="true"><use href="#i-calendar"/></svg><h3>Prazos em dia</h3><p>Nada de multa por atraso.</p></div>
+          <div class="feature reveal"><svg class="ico feature__ico" aria-hidden="true"><use href="#i-briefcase"/></svg><h3>Parceria real</h3><p>Orientação para decisões melhores.</p></div>
         </div>
       </div>
     </section>
@@ -359,23 +392,23 @@
     <section class="section section--soft" id="nichos">
       <div class="container">
         <header class="section__head reveal">
-          <span class="eyebrow">Segmentos</span>
-          <h2>Atendemos os <span class="hl">mais diversos nichos</span></h2>
-          <p>Cada segmento tem suas regras. Nós conhecemos as do seu.</p>
+          <span class="eyebrow">Segmentos atendidos</span>
+          <h2>Experiência em <span class="hl">diversos segmentos</span></h2>
+          <p>Conhecemos as particularidades fiscais, tributárias e trabalhistas de cada setor da economia.</p>
         </header>
         <div class="niches">
-          <div class="niche reveal">🛒<span>Comércio e varejo</span></div>
-          <div class="niche reveal">🩺<span>Clínicas e saúde</span></div>
-          <div class="niche reveal">🍽️<span>Restaurantes e alimentação</span></div>
-          <div class="niche reveal">🏗️<span>Construção civil</span></div>
-          <div class="niche reveal">💻<span>Prestadores de serviço</span></div>
-          <div class="niche reveal">⚖️<span>Profissionais liberais</span></div>
-          <div class="niche reveal">🏭<span>Indústria</span></div>
-          <div class="niche reveal">🌾<span>Agronegócio</span></div>
-          <div class="niche reveal">🚚<span>Transporte e logística</span></div>
-          <div class="niche reveal">💇<span>Beleza e estética</span></div>
-          <div class="niche reveal">🎓<span>Educação</span></div>
-          <div class="niche reveal">🧑‍💼<span>MEI e autônomos</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-cart"/></svg></span><span>Comércio e varejo</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-pulse"/></svg></span><span>Clínicas e saúde</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-utensils"/></svg></span><span>Restaurantes e alimentação</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-hardhat"/></svg></span><span>Construção civil</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-laptop"/></svg></span><span>Prestadores de serviço</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-scale"/></svg></span><span>Profissionais liberais</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-factory"/></svg></span><span>Indústria</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-leaf"/></svg></span><span>Agronegócio</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-truck"/></svg></span><span>Transporte e logística</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-scissors"/></svg></span><span>Beleza e estética</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-cap"/></svg></span><span>Educação</span></div>
+          <div class="niche reveal"><span class="niche__ico"><svg class="ico" aria-hidden="true"><use href="#i-user"/></svg></span><span>MEI e autônomos</span></div>
         </div>
       </div>
     </section>
@@ -486,10 +519,10 @@
           <p>Conte um pouco sobre sua empresa e um contador responde você pelo WhatsApp.</p>
           <ul class="contact-list">
             <!-- TROQUE pelos dados reais -->
-            <li>📍 Rua Exemplo, 000 - Centro, Vitória de Santo Antão - PE</li>
-            <li>📞 (81) 00000-0000</li>
-            <li>✉️ contato@SEUDOMINIO.com.br</li>
-            <li>🕗 Seg a Sex, 8h às 17h</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-pin"/></svg> Rua Exemplo, 000 - Centro, Vitória de Santo Antão - PE</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-phone"/></svg> (81) 00000-0000</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-mail"/></svg> contato@SEUDOMINIO.com.br</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg> Seg a Sex, 8h às 17h</li>
           </ul>
         </div>
 
